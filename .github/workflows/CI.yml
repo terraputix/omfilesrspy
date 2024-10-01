@@ -70,15 +70,12 @@ jobs:
           - target: "x86_64-unknown-linux-musl"
             image_tag: "x86_64-musl"
             before-script: cat /etc/os-release && yum install clang -y
-          # { target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
-          # {
-          #   target: "armv7-unknown-linux-musleabihf",
-          #   image_tag: "armv7-musleabihf",
-          # },
-          # {
-          #   target: "powerpc64le-unknown-linux-musl",
-          #   image_tag: "powerpc64le-musl",
-          # },
+          # - target: "aarch64-unknown-linux-musl"
+          #   image_tag: "aarch64-musl"
+          - target: "armv7-unknown-linux-musleabihf"
+            image_tag: "armv7-musleabihf"
+          # - target: "powerpc64le-unknown-linux-musl"
+          #   image_tag: "powerpc64le-musl"
     container:
       image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
       env:
