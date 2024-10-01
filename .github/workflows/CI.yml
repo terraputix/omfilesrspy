@@ -26,12 +26,11 @@ jobs:
           - runner: ubuntu-latest
             target: x86_64
             # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
-
             before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
-            # before-script: cat /etc/os-release && apt install clang libclang-dev
-          # - runner: ubuntu-latest
-          #   target: x86
-          #   before-script: yum install clang llvm llvm-devel -y
+          - runner: ubuntu-latest
+            target: x86
+            # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
+            before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
           # - runner: ubuntu-latest
           #   target: aarch64-unknown-linux-gnu
           #   before-script: yum install clang llvm llvm-devel -y
@@ -126,31 +125,31 @@ jobs:
   #         name: wheels-windows-${{ matrix.platform.target }}
   #         path: dist
 
-  # macos:
-  #   runs-on: ${{ matrix.platform.runner }}
-  #   strategy:
-  #     matrix:
-  #       platform:
-  #         - runner: macos-12
-  #           target: x86_64
-  #         - runner: macos-14
-  #           target: aarch64
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: 3.x
-  #     - name: Build wheels
-  #       uses: PyO3/maturin-action@v1
-  #       with:
-  #         target: ${{ matrix.platform.target }}
-  #         args: --release --out dist --find-interpreter
-  #         sccache: "true"
-  #     - name: Upload wheels
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: wheels-macos-${{ matrix.platform.target }}
-  #         path: dist
+  macos:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: macos-12
+            target: x86_64
+          - runner: macos-14
+            target: aarch64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: "true"
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-${{ matrix.platform.target }}
+          path: dist
 
   sdist:
     runs-on: ubuntu-latest
@@ -175,7 +174,7 @@ jobs:
       - linux
       - musllinux
       # - windows
-      # - macos
+      - macos
       - sdist
     permissions:
       # Use to sign the release artifacts
