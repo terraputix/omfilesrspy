@@ -4,6 +4,7 @@ import zarr
 import time
 import netCDF4 as nc
 import omfilesrspy as om
+from numcodecs import Blosc
 
 # Create a large NumPy array
 array_size = (1000, 10000)
@@ -13,13 +14,18 @@ sinusoidal_data = 20 * np.sin(x) + 20  # Sinusoidal curve between -20 and 60
 noise = np.random.normal(0, 5, array_size)  # Add some noise
 data = (sinusoidal_data + noise).astype(np.float32)
 
+print("Data shape:", data.shape)
+print("Data type:", data.dtype)
+
 # Define chunk size
 chunk_size = (100, 100)
 
 # Measure HDF5 write time
 start_time = time.time()
 with h5py.File("data.h5", "w") as f:
-    f.create_dataset("dataset", data=data, chunks=chunk_size)
+    f.create_dataset(
+        "dataset", data=data, chunks=chunk_size, compression="gzip", compression_opts=9
+    )
 hdf5_write_time = time.time() - start_time
 
 # Measure HDF5 read time
@@ -29,8 +35,9 @@ with h5py.File("data.h5", "r") as f:
 hdf5_read_time = time.time() - start_time
 
 # Measure Zarr write time
+compressor = Blosc(cname="zstd", clevel=9)
 start_time = time.time()
-zarr.save("data.zarr", data, chunks=chunk_size)
+z = zarr.array(data, chunks=chunk_size, compressor=compressor, chunk_store="data.zarr")
 zarr_write_time = time.time() - start_time
 
 # Measure Zarr read time
@@ -44,7 +51,12 @@ with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
     ds.createDimension("dim1", array_size[0])
     ds.createDimension("dim2", array_size[1])
     var = ds.createVariable(
-        "dataset", np.float32, ("dim1", "dim2"), chunksizes=chunk_size
+        "dataset",
+        np.float32,
+        ("dim1", "dim2"),
+        chunksizes=chunk_size,
+        zlib=True,
+        complevel=9,
     )
     var[:] = data
 netcdf_write_time = time.time() - start_time
