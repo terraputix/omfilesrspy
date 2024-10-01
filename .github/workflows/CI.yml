@@ -52,7 +52,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
-          sccache: "true"
+          # sccache: "true"
           manylinux: 2_28
           before-script-linux: ${{ matrix.platform.before-script }}
       - name: Upload wheels
