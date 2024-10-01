@@ -19,41 +19,49 @@ permissions:
 
 jobs:
   linux:
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-latest
-            target: x86_64
-            before-script: yum install clang llvm llvm-devel -y
-          - runner: ubuntu-latest
-            target: x86
-            before-script: yum install clang llvm llvm-devel -y
-          # - runner: ubuntu-latest
-          #   target: aarch64
-          #   before-script: yum install clang llvm llvm-devel -y
-          # - runner: ubuntu-latest
-          #   target: armv7
-          #   before-script: yum install clang llvm llvm-devel -y
-          # - runner: ubuntu-latest
-          #   target: s390x
-          #   before-script: yum install clang llvm llvm-devel -y
-          # - runner: ubuntu-latest
-          #   target: ppc64le
-          #   before-script: yum install clang llvm llvm-devel -y
+          [
+            { target: "x86_64-unknown-linux-musl", image_tag: "x86_64-musl" },
+            { target: "i686-unknown-linux-musl", image_tag: "i686-musl" },
+            { target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
+            {
+              target: "armv7-unknown-linux-musleabihf",
+              image_tag: "armv7-musleabihf",
+            },
+            {
+              target: "powerpc64le-unknown-linux-musl",
+              image_tag: "powerpc64le-musl",
+            },
+          ]
+    container:
+      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
+      env:
+        CFLAGS_armv7_unknown_linux_musleabihf: "-mfpu=vfpv3-d16"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
-      - name: Build wheels
+      - name: Build wheels - manylinux
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
           manylinux: auto
-          before-script-linux: ${{ matrix.platform.before-script }}
+          container: off
+          # before-script-linux: ${{ matrix.platform.before-script }}
+      - name: Build wheels - musllinux
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: "true"
+          manylinux: musllinux_1_2
+          container: off
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -78,13 +86,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
-          sccache: "true"
-          manylinux: musllinux_1_2
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
