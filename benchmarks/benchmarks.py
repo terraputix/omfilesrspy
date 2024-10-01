@@ -13,10 +13,13 @@ sinusoidal_data = 20 * np.sin(x) + 20  # Sinusoidal curve between -20 and 60
 noise = np.random.normal(0, 5, array_size)  # Add some noise
 data = (sinusoidal_data + noise).astype(np.float32)
 
+# Define chunk size
+chunk_size = (100, 100)
+
 # Measure HDF5 write time
 start_time = time.time()
 with h5py.File("data.h5", "w") as f:
-    f.create_dataset("dataset", data=data)
+    f.create_dataset("dataset", data=data, chunks=chunk_size)
 hdf5_write_time = time.time() - start_time
 
 # Measure HDF5 read time
@@ -27,7 +30,7 @@ hdf5_read_time = time.time() - start_time
 
 # Measure Zarr write time
 start_time = time.time()
-zarr.save("data.zarr", data)
+zarr.save("data.zarr", data, chunks=chunk_size)
 zarr_write_time = time.time() - start_time
 
 # Measure Zarr read time
@@ -40,7 +43,9 @@ start_time = time.time()
 with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
     ds.createDimension("dim1", array_size[0])
     ds.createDimension("dim2", array_size[1])
-    var = ds.createVariable("dataset", np.float32, ("dim1", "dim2"))
+    var = ds.createVariable(
+        "dataset", np.float32, ("dim1", "dim2"), chunksizes=chunk_size
+    )
     var[:] = data
 netcdf_write_time = time.time() - start_time
 
@@ -52,7 +57,7 @@ netcdf_read_time = time.time() - start_time
 
 # Measure OM write time
 start_time = time.time()
-om.write_om_file("data.om", data, 1000, 10000, 20, 20)
+om.write_om_file("data.om", data, 1000, 10000, chunk_size[0], chunk_size[1])
 om_write_time = time.time() - start_time
 
 # Measure OM read time
