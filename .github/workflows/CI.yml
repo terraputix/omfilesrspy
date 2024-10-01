@@ -69,7 +69,7 @@ jobs:
         platform:
           - target: "x86_64-unknown-linux-musl"
             image_tag: "x86_64-musl"
-            before-script: cat /etc/os-release && yum install clang -y
+            before-script: cat /etc/os-release && apt install clang -y
           # - target: "aarch64-unknown-linux-musl"
           #   image_tag: "aarch64-musl"
           - target: "armv7-unknown-linux-musleabihf"
