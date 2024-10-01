@@ -401,7 +401,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 [[package]]
 name = "turbo_pfor_om"
 version = "0.0.1"
-source = "git+https://github.com/terraputix/turbopfor-om-rs.git?branch=main#12a5b090e7029b6ba2fbc0e50036cc5e422d6777"
+source = "git+https://github.com/terraputix/turbopfor-om-rs.git?branch=main#4736a8cd32e29d69c00409d16bbbfb9b7e20a64a"
 dependencies = [
  "bindgen",
  "libc",
