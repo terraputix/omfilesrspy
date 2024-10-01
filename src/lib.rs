@@ -44,12 +44,19 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
         dim1: usize,
         chunk0: usize,
         chunk1: usize,
+        scalefactor: f32,
     ) -> PyResult<()> {
         let data = data.as_slice().unwrap();
         let writer = OmFileWriter::new(dim0, dim1, chunk0, chunk1);
 
         writer
-            .write_all_to_file(file_path, CompressionType::P4nzdec256, 10.0, &data, true)
+            .write_all_to_file(
+                file_path,
+                CompressionType::P4nzdec256,
+                scalefactor,
+                &data,
+                true,
+            )
             .unwrap();
 
         Ok(())

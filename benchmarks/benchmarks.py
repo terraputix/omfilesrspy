@@ -4,7 +4,9 @@ import zarr
 import time
 import netCDF4 as nc
 import omfilesrspy as om
-from numcodecs import Blosc
+
+# from numcodecs import Blosc
+from functools import wraps
 
 # Create a large NumPy array
 array_size = (1000, 10000)
@@ -20,69 +22,121 @@ print("Data type:", data.dtype)
 # Define chunk size
 chunk_size = (100, 100)
 
-# Measure HDF5 write time
-start_time = time.time()
-with h5py.File("data.h5", "w") as f:
-    f.create_dataset(
-        "dataset", data=data, chunks=chunk_size, compression="gzip", compression_opts=9
+
+# Decorator to measure execution time
+def measure_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        cpu_start_time = time.process_time()
+        result = func(*args, **kwargs)
+        elapsed_time = time.time() - start_time
+        cpu_elapsed_time = time.process_time() - cpu_start_time
+        return result, elapsed_time, cpu_elapsed_time
+
+    return wrapper
+
+
+@measure_time
+def write_hdf5(data, chunk_size):
+    with h5py.File("data.h5", "w") as f:
+        f.create_dataset(
+            "dataset",
+            data=data,
+            chunks=chunk_size,
+            compression="gzip",
+            compression_opts=9,
+        )
+
+
+@measure_time
+def read_hdf5():
+    with h5py.File("data.h5", "r") as f:
+        return f["dataset"][:]
+
+
+@measure_time
+def write_zarr(data, chunk_size):
+    # compressor = Blosc(cname="lz4", clevel=5)
+    # _z = zarr.array(
+    #     data, chunks=chunk_size, compressor=compressor, chunk_store="data.zarr"
+    # )
+    zarr.save("data.zarr", data, chunks=chunk_size)
+
+
+@measure_time
+def read_zarr():
+    data = zarr.load("data.zarr", path="arr_0")
+    return data
+
+
+@measure_time
+def write_netcdf(data, chunk_size):
+    with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
+        ds.createDimension("dim1", data.shape[0])
+        ds.createDimension("dim2", data.shape[1])
+        var = ds.createVariable(
+            "dataset",
+            np.float32,
+            ("dim1", "dim2"),
+            chunksizes=chunk_size,
+            zlib=True,
+            complevel=9,
+        )
+        var[:] = data
+
+
+@measure_time
+def read_netcdf():
+    with nc.Dataset("data.nc", "r") as ds:
+        return ds.variables["dataset"][:]
+
+
+@measure_time
+def write_om(data, chunk_size):
+    om.write_om_file(
+        "data.om",
+        data,
+        data.shape[0],
+        data.shape[1],
+        chunk_size[0],
+        chunk_size[1],
+        1000,
     )
-hdf5_write_time = time.time() - start_time
 
-# Measure HDF5 read time
-start_time = time.time()
-with h5py.File("data.h5", "r") as f:
-    data_read = f["dataset"][:]
-hdf5_read_time = time.time() - start_time
 
-# Measure Zarr write time
-compressor = Blosc(cname="zstd", clevel=9)
-start_time = time.time()
-z = zarr.array(data, chunks=chunk_size, compressor=compressor, chunk_store="data.zarr")
-zarr_write_time = time.time() - start_time
+@measure_time
+def read_om():
+    return om.read_om_file("data.om", 0, 1000, 0, 10000)
 
-# Measure Zarr read time
-start_time = time.time()
-data_read = zarr.load("data.zarr")
-zarr_read_time = time.time() - start_time
 
-# Measure NetCDF write time
-start_time = time.time()
-with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
-    ds.createDimension("dim1", array_size[0])
-    ds.createDimension("dim2", array_size[1])
-    var = ds.createVariable(
-        "dataset",
-        np.float32,
-        ("dim1", "dim2"),
-        chunksizes=chunk_size,
-        zlib=True,
-        complevel=9,
+# Measure times
+results = {}
+formats = {
+    "HDF5": (write_hdf5, read_hdf5),
+    "Zarr": (write_zarr, read_zarr),
+    "NetCDF": (write_netcdf, read_netcdf),
+    "OM": (write_om, read_om),
+}
+
+for fmt, (write_func, read_func) in formats.items():
+    results[fmt] = {}
+    _, results[fmt]["write_time"], results[fmt]["cpu_write_time"] = write_func(
+        data, chunk_size
     )
-    var[:] = data
-netcdf_write_time = time.time() - start_time
+    read_data, results[fmt]["read_time"], results[fmt]["cpu_read_time"] = read_func()
 
-# Measure NetCDF read time
-start_time = time.time()
-with nc.Dataset("data.nc", "r") as ds:
-    data_read = ds.variables["dataset"][:]
-netcdf_read_time = time.time() - start_time
-
-# Measure OM write time
-start_time = time.time()
-om.write_om_file("data.om", data, 1000, 10000, chunk_size[0], chunk_size[1])
-om_write_time = time.time() - start_time
-
-# Measure OM read time
-start_time = time.time()
-data_read = om.read_om_file("data.om", 0, 1000, 0, 10000)
-om_read_time = time.time() - start_time
+    if read_data.shape == (1000, 10000):
+        # Print the first five elements of the read data
+        print(f"{fmt} first five elements: {read_data[0, :5]}")
+    else:
+        print(f"{fmt} read data shape: {read_data[:5]}")
 
 # Print results
-print(f"HDF5 write time: {hdf5_write_time:.4f} seconds")
-print(f"HDF5 read time: {hdf5_read_time:.4f} seconds")
-print(f"Zarr write time: {zarr_write_time:.4f} seconds")
-print(f"Zarr read time: {zarr_read_time:.4f} seconds")
-print(f"NetCDF write time: {netcdf_write_time:.4f} seconds")
-print(f"NetCDF read time: {netcdf_read_time:.4f} seconds")
-print(f"OM write time: {om_write_time:.4f} seconds")
-print(f"OM read time: {om_read_time:.4f} seconds")
+for fmt, times in results.items():
+    print(
+        f"{fmt} write time: {times['write_time']:.4f} seconds (CPU: {times['cpu_write_time']:.4f} seconds)"
+    )
+    print(
+        f"{fmt} read time: {times['read_time']:.4f} seconds (CPU: {times['cpu_read_time']:.4f} seconds)"
+    )
