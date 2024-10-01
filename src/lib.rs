@@ -1,9 +1,4 @@
-use numpy::ndarray::{Array1, ArrayD, ArrayView1, ArrayViewD, ArrayViewMutD, Zip};
-use numpy::{
-    datetime::{units, Timedelta},
-    Complex64, IntoPyArray, PyArray1, PyArray2, PyArrayDyn, PyArrayMethods, PyReadonlyArray1,
-    PyReadonlyArray2, PyReadonlyArrayDyn, PyReadwriteArray1, PyReadwriteArrayDyn,
-};
+use numpy::PyReadonlyArray2;
 
 use omfiles_rs::{
     compression::CompressionType,
