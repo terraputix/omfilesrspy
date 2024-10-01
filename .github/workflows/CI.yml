@@ -27,10 +27,10 @@ jobs:
             target: x86_64
             # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
             before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
-          - runner: ubuntu-latest
-            target: x86
-            # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
-            before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang glibc-devel.i686 -y
+          # - runner: ubuntu-latest
+          #   target: x86
+          #   # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
+          #   before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang glibc-devel.i686 -y
           # - runner: ubuntu-latest
           #   target: aarch64-unknown-linux-gnu
           #   before-script: yum install clang llvm llvm-devel -y
@@ -66,19 +66,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [
-            { target: "x86_64-unknown-linux-musl", image_tag: "x86_64-musl" },
-            { target: "i686-unknown-linux-musl", image_tag: "i686-musl" },
-            # { target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
-            # {
-            #   target: "armv7-unknown-linux-musleabihf",
-            #   image_tag: "armv7-musleabihf",
-            # },
-            # {
-            #   target: "powerpc64le-unknown-linux-musl",
-            #   image_tag: "powerpc64le-musl",
-            # },
-          ]
+        platform:
+          - target: "x86_64-unknown-linux-musl"
+            image_tag: "x86_64-musl"
+            before-script: cat /etc/os-release && yum install clang -y
+          # { target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
+          # {
+          #   target: "armv7-unknown-linux-musleabihf",
+          #   image_tag: "armv7-musleabihf",
+          # },
+          # {
+          #   target: "powerpc64le-unknown-linux-musl",
+          #   image_tag: "powerpc64le-musl",
+          # },
     container:
       image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
       env:
