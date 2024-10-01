@@ -25,7 +25,9 @@ jobs:
         platform:
           - runner: ubuntu-latest
             target: x86_64
-            before-script: python3 -m ensurepip && apt install clang libclang-dev
+            # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
+
+            before-script: python3 -m ensurepip && cat /etc/os-release && apt install clang libclang-dev
             # before-script: cat /etc/os-release && apt install clang libclang-dev
           # - runner: ubuntu-latest
           #   target: x86
