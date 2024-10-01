@@ -9,9 +9,8 @@ on:
   push:
     branches:
       - main
-      - master
     tags:
-      - '*'
+      - "*"
   pull_request:
   workflow_dispatch:
 
@@ -26,16 +25,23 @@ jobs:
         platform:
           - runner: ubuntu-latest
             target: x86_64
-          - runner: ubuntu-latest
-            target: x86
-          - runner: ubuntu-latest
-            target: aarch64
-          - runner: ubuntu-latest
-            target: armv7
-          - runner: ubuntu-latest
-            target: s390x
-          - runner: ubuntu-latest
-            target: ppc64le
+            # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
+            before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
+          # - runner: ubuntu-latest
+          #   target: aarch64-unknown-linux-gnu
+          #   before-script: cat /etc/os-release && apt install clang -y
+          # - runner: ubuntu-latest
+          #   target: armv7
+          #   before-script: cat /etc/os-release && apt install clang -y
+          # - runner: ubuntu-latest
+          #   target: x86
+          #   before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang glibc-devel.i686 -y
+          # - runner: ubuntu-latest
+          #   target: s390x
+          #   before-script: yum install clang llvm llvm-devel -y
+          # - runner: ubuntu-latest
+          #   target: ppc64le
+          #   before-script: yum install clang llvm llvm-devel -y
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -46,8 +52,9 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
-          sccache: 'true'
-          manylinux: auto
+          sccache: "true"
+          manylinux: 2_28
+          before-script-linux: ${{ matrix.platform.before-script }}
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -55,18 +62,24 @@ jobs:
           path: dist
 
   musllinux:
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         platform:
-          - runner: ubuntu-latest
-            target: x86_64
-          - runner: ubuntu-latest
-            target: x86
-          - runner: ubuntu-latest
-            target: aarch64
-          - runner: ubuntu-latest
-            target: armv7
+          - target: "x86_64-unknown-linux-musl"
+            image_tag: "x86_64-musl"
+            before-script: cat /etc/os-release && apt install clang -y
+          # - target: "aarch64-unknown-linux-musl"
+          #   image_tag: "aarch64-musl"
+          # - target: "armv7-unknown-linux-musleabihf"
+          #   image_tag: "armv7-musleabihf"
+          #   before-script: cat /etc/os-release && apt install clang -y
+          # - target: "powerpc64le-unknown-linux-musl"
+          #   image_tag: "powerpc64le-musl"
+    container:
+      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
+      env:
+        CFLAGS_armv7_unknown_linux_musleabihf: "-mfpu=vfpv3-d16"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -77,40 +90,42 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
-          sccache: 'true'
+          sccache: "true"
           manylinux: musllinux_1_2
+          container: off
+          before-script-linux: ${{ matrix.platform.before-script }}
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
 
-  windows:
-    runs-on: ${{ matrix.platform.runner }}
-    strategy:
-      matrix:
-        platform:
-          - runner: windows-latest
-            target: x64
-          - runner: windows-latest
-            target: x86
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-          architecture: ${{ matrix.platform.target }}
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
-          sccache: 'true'
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-windows-${{ matrix.platform.target }}
-          path: dist
+  # windows:
+  #   runs-on: ${{ matrix.platform.runner }}
+  #   strategy:
+  #     matrix:
+  #       platform:
+  #         - runner: windows-latest
+  #           target: x64
+  #         - runner: windows-latest
+  #           target: x86
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: 3.x
+  #         architecture: ${{ matrix.platform.target }}
+  #     - name: Build wheels
+  #       uses: PyO3/maturin-action@v1
+  #       with:
+  #         target: ${{ matrix.platform.target }}
+  #         args: --release --out dist --find-interpreter
+  #         sccache: 'true'
+  #     - name: Upload wheels
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: wheels-windows-${{ matrix.platform.target }}
+  #         path: dist
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
@@ -131,7 +146,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
-          sccache: 'true'
+          sccache: "true"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -157,7 +172,12 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    needs: [linux, musllinux, windows, macos, sdist]
+    needs:
+      - linux
+      - musllinux
+      # - windows
+      - macos
+      - sdist
     permissions:
       # Use to sign the release artifacts
       id-token: write
@@ -170,7 +190,7 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: 'wheels-*/*'
+          subject-path: "wheels-*/*"
       - name: Publish to PyPI
         if: "startsWith(github.ref, 'refs/tags/')"
         uses: PyO3/maturin-action@v1
