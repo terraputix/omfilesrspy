@@ -35,12 +35,12 @@ jobs:
           - runner: ubuntu-latest
             target: armv7
             before-script: yum install clang llvm llvm-devel -y
-          - runner: ubuntu-latest
-            target: s390x
-            before-script: yum install clang llvm llvm-devel -y
-          - runner: ubuntu-latest
-            target: ppc64le
-            before-script: yum install clang llvm llvm-devel -y
+          # - runner: ubuntu-latest
+          #   target: s390x
+          #   before-script: yum install clang llvm llvm-devel -y
+          # - runner: ubuntu-latest
+          #   target: ppc64le
+          #   before-script: yum install clang llvm llvm-devel -y
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
