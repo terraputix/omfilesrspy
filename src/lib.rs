@@ -1,4 +1,14 @@
-use omfiles_rs::om::reader::OmFileReader;
+use numpy::ndarray::{Array1, ArrayD, ArrayView1, ArrayViewD, ArrayViewMutD, Zip};
+use numpy::{
+    datetime::{units, Timedelta},
+    Complex64, IntoPyArray, PyArray1, PyArray2, PyArrayDyn, PyArrayMethods, PyReadonlyArray1,
+    PyReadonlyArray2, PyReadonlyArrayDyn, PyReadwriteArray1, PyReadwriteArrayDyn,
+};
+
+use omfiles_rs::{
+    compression::CompressionType,
+    om::{reader::OmFileReader, writer::OmFileWriter},
+};
 use pyo3::prelude::*;
 
 #[pyfunction]
@@ -16,6 +26,25 @@ fn read_om_file(
     Ok(data)
 }
 
+#[pyfunction]
+fn write_om_file<'py>(
+    file_path: &str,
+    data: PyReadonlyArray2<'py, f32>,
+    dim0: usize,
+    dim1: usize,
+    chunk0: usize,
+    chunk1: usize,
+) -> PyResult<()> {
+    let data = data.as_slice().unwrap();
+    let writer = OmFileWriter::new(dim0, dim1, chunk0, chunk1);
+
+    writer
+        .write_all_to_file(file_path, CompressionType::P4nzdec256, 10.0, &data, true)
+        .unwrap();
+
+    Ok(())
+}
+
 /// Formats the sum of two numbers as string.
 #[pyfunction]
 fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
@@ -28,6 +57,8 @@ fn omfilesrspy(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
 
     m.add_function(wrap_pyfunction!(read_om_file, m)?)?;
+
+    m.add_function(wrap_pyfunction!(write_om_file, m)?)?;
 
     Ok(())
 }
