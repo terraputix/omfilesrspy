@@ -77,9 +77,9 @@ jobs:
           # - runner: ubuntu-latest
           #   target: aarch64
           #   before-script: cat /etc/os-release && apt install clang -y
-          - runner: ubuntu-latest
-            target: armv7
-            before-script: cat /etc/os-release && apt install clang -y
+          # - runner: ubuntu-latest
+          #   target: armv7
+          #   before-script: cat /etc/os-release && apt install clang -y
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
