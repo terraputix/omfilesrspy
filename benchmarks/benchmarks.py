@@ -44,8 +44,8 @@ def write_hdf5(data, chunk_size):
             "dataset",
             data=data,
             chunks=chunk_size,
-            compression="gzip",
-            compression_opts=9,
+            # compression="gzip",
+            # compression_opts=9,
         )
 
 
@@ -80,8 +80,8 @@ def write_netcdf(data, chunk_size):
             np.float32,
             ("dim1", "dim2"),
             chunksizes=chunk_size,
-            zlib=True,
-            complevel=9,
+            # zlib=True,
+            # complevel=9,
         )
         var[:] = data
 
