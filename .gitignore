@@ -1,4 +1,8 @@
 test_file.om
+data.h5
+data.nc
+data.om
+data.zarr/
 
 /target
 
