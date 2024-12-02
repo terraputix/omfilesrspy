@@ -1,21 +1,16 @@
 use numpy::{ndarray::Dim, IntoPyArray, PyArray, PyReadonlyArray2};
-
-use omfiles_rs::{
-    compression::CompressionType,
-    om::{reader::OmFileReader, writer::OmFileWriter},
-};
 use pyo3::prelude::*;
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
+use omfiles_rs::{
+    core::compression::CompressionType,
+    io::{reader::OmFileReader, writer::OmFileWriter},
+};
+use std::rc::Rc;
 
 /// A Python module implemented in Rust.
-#[pymodule]
+#[pymodule(gil_used = false)]
 fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
-    // read from a om file
+    // read from an om file
     #[pyfn(m)]
     #[pyo3(name = "read_om_file")]
     fn read_om_file<'py>(
@@ -31,10 +26,10 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
             .read_range(Some(dim0_start..dim0_end), Some(dim1_start..dim1_end))
             .unwrap();
 
-        data.into_pyarray_bound(py)
+        data.into_pyarray(py)
     }
 
-    // write to a om file
+    // write to an om file
     #[pyfn(m)]
     #[pyo3(name = "write_om_file")]
     fn write_om_file<'py>(
@@ -46,7 +41,9 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
         chunk1: usize,
         scalefactor: f32,
     ) -> PyResult<()> {
-        let data = data.as_slice().unwrap();
+        // Convert Python sequence to Vec<f32>
+        let data_vec: Rc<Vec<f32>> = Rc::new(data.extract()?);
+
         let writer = OmFileWriter::new(dim0, dim1, chunk0, chunk1);
 
         writer
@@ -54,7 +51,7 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
                 file_path,
                 CompressionType::P4nzdec256,
                 scalefactor,
-                &data,
+                data_vec,
                 true,
             )
             .unwrap();
@@ -62,6 +59,5 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
         Ok(())
     }
 
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     Ok(())
 }
