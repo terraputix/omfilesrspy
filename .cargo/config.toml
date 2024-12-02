@@ -1,0 +1,2 @@
+[target.aarch64-unknown-linux-gnu]
+env = { "SYSROOT" = "/usr/aarch64-linux-gnu", "CC" = "clang" }
