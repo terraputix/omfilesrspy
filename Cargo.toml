@@ -9,5 +9,5 @@ name = "omfilesrspy"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = "0.22.0"
+pyo3 = "0.23.0"
 omfiles-rs = { git = "https://github.com/terraputix/omfiles-rs", branch = "multidim-file-format" }
