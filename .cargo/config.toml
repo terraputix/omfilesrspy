@@ -1,0 +1,2 @@
+[target.x86_64-unknown-linux-musl]
+env = { "UNSAFE_PYO3_BUILD_FREE_THREADED" = "1" }
