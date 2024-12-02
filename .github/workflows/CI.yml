@@ -59,9 +59,6 @@ jobs:
             before-script: cat /etc/os-release && apt install clang -y
           # - target: "aarch64-unknown-linux-musl"
           #   image_tag: "aarch64-musl"
-          # - target: "armv7-unknown-linux-musleabihf"
-          #   image_tag: "armv7-musleabihf"
-          #   before-script: cat /etc/os-release && apt install clang -y
           # - target: "powerpc64le-unknown-linux-musl"
           #   image_tag: "powerpc64le-musl"
     container:
@@ -88,32 +85,32 @@ jobs:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
 
-  # windows:
-  #   runs-on: ${{ matrix.platform.runner }}
-  #   strategy:
-  #     matrix:
-  #       platform:
-  #         - runner: windows-latest
-  #           target: x64
-  #         - runner: windows-latest
-  #           target: x86
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: 3.x
-  #         architecture: ${{ matrix.platform.target }}
-  #     - name: Build wheels
-  #       uses: PyO3/maturin-action@v1
-  #       with:
-  #         target: ${{ matrix.platform.target }}
-  #         args: --release --out dist --find-interpreter
-  #         sccache: 'true'
-  #     - name: Upload wheels
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: wheels-windows-${{ matrix.platform.target }}
-  #         path: dist
+  windows:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: windows-latest
+            target: x64
+          - runner: windows-latest
+            target: x86
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+          architecture: ${{ matrix.platform.target }}
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: "true"
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-${{ matrix.platform.target }}
+          path: dist
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
