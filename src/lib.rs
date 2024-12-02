@@ -1,4 +1,4 @@
-use omfiles_rs::om::reader::OmFileReader;
+use omfiles_rs::io::reader::OmFileReader;
 use pyo3::prelude::*;
 
 #[pyfunction]
