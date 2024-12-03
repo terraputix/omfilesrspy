@@ -1,33 +1,39 @@
-use omfiles_rs::io::reader::OmFileReader;
+use numpy::{ndarray::Dim, PyArray, PyReadonlyArray2};
 use pyo3::prelude::*;
-
-#[pyfunction]
-fn read_om_file(
-    file_path: &str,
-    dim0_start: usize,
-    dim0_end: usize,
-    dim1_start: usize,
-    dim1_end: usize,
-) -> PyResult<Vec<f32>> {
-    let reader = OmFileReader::from_file(file_path).unwrap();
-    let data = reader
-        .read_range(Some(dim0_start..dim0_end), Some(dim1_start..dim1_end))
-        .unwrap();
-    Ok(data)
-}
-
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
+mod reader;
+mod writer;
 
 /// A Python module implemented in Rust.
 #[pymodule(gil_used = false)]
-fn omfilesrspy(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
+    // read from an om file
+    #[pyfn(m)]
+    #[pyo3(name = "read_om_file")]
+    fn read_om_file<'py>(
+        py: Python<'py>,
+        file_path: &str,
+        dim0_start: usize,
+        dim0_end: usize,
+        dim1_start: usize,
+        dim1_end: usize,
+    ) -> Bound<'py, PyArray<f32, Dim<[usize; 1]>>> {
+        reader::read_om_file(py, file_path, dim0_start, dim0_end, dim1_start, dim1_end)
+    }
 
-    m.add_function(wrap_pyfunction!(read_om_file, m)?)?;
+    // write to an om file
+    #[pyfn(m)]
+    #[pyo3(name = "write_om_file")]
+    fn write_om_file<'py>(
+        file_path: &str,
+        data: PyReadonlyArray2<'py, f32>,
+        dim0: usize,
+        dim1: usize,
+        chunk0: usize,
+        chunk1: usize,
+        scalefactor: f32,
+    ) -> PyResult<()> {
+        writer::write_om_file(file_path, data, dim0, dim1, chunk0, chunk1, scalefactor)
+    }
 
     Ok(())
 }
