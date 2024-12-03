@@ -66,6 +66,7 @@ jobs:
           - target: "x86_64-unknown-linux-musl"
             image_tag: "x86_64-musl"
             before-script: cat /etc/os-release && apt install clang -y
+            skip_tests: false
           # - target: "aarch64-unknown-linux-musl"
           #   image_tag: "aarch64-musl"
           # - target: "powerpc64le-unknown-linux-musl"
@@ -89,7 +90,7 @@ jobs:
           container: off
           before-script-linux: ${{ matrix.platform.before-script }}
       - name: Test musl wheel
-        if: matrix.target == 'x86_64-unknown-linux-musl'
+        if: ${{ matrix.platform.skip_tests != 'true' }}
         uses: addnab/docker-run-action@v3
         with:
           image: alpine:latest
