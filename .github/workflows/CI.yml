@@ -88,9 +88,23 @@ jobs:
           manylinux: musllinux_1_2
           container: off
           before-script-linux: ${{ matrix.platform.before-script }}
-      - uses: ./.github/actions/run-tests
+      - name: Test musl wheel
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        uses: addnab/docker-run-action@v3
         with:
-          skip_tests: ${{ matrix.platform.skip_tests }}
+          image: alpine:latest
+          options: -v ${{ github.workspace }}:/io -w /io
+          run: |
+            apk add python3 py3-pip
+            python -m venv .venv
+            source .venv/bin/activate
+            pip install --upgrade pip
+            pip install omfilesrspy --find-links dist/ --force-reinstall
+            pip install pytest
+            pytest tests/
+      # - uses: ./.github/actions/run-tests
+      #   with:
+      #     skip_tests: ${{ matrix.platform.skip_tests }}
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
