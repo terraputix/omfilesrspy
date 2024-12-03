@@ -18,137 +18,71 @@ permissions:
   contents: read
 
 jobs:
-  linux:
+  build:
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
         platform:
+          # Linux x86_64
           - runner: ubuntu-latest
             target: x86_64
-            # ensurepip because of: https://github.com/PyO3/maturin-action/issues/249
             before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
+            manylinux: "2_28"
+
+          # Linux aarch64
           - runner: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             skip_tests: true
-            before-script: cat /etc/os-release && apt-get update && apt-get install --assume-yes --no-install-recommends crossbuild-essential-arm64 && clang --version
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
-          sccache: "true"
-          manylinux: 2_28
-          before-script-linux: ${{ matrix.platform.before-script }}
-      - uses: ./.github/actions/run-tests
-        with:
-          skip_tests: ${{ matrix.platform.skip_tests }}
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-linux-${{ matrix.platform.target }}
-          path: dist
+            before-script: |
+              apt-get update && \
+              apt-get install --assume-yes --no-install-recommends crossbuild-essential-arm64
+            manylinux: "2_28"
 
-  musllinux:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform:
-          - target: "x86_64-unknown-linux-musl"
-            image_tag: "x86_64-musl"
+          # Musl x86_64
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            container: docker://messense/rust-musl-cross:x86_64-musl
             before-script: cat /etc/os-release && apt install clang -y
-          # - target: "aarch64-unknown-linux-musl"
-          #   image_tag: "aarch64-musl"
-          # - target: "powerpc64le-unknown-linux-musl"
-          #   image_tag: "powerpc64le-musl"
-    container:
-      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
-      env:
-        CFLAGS_armv7_unknown_linux_musleabihf: "-mfpu=vfpv3-d16"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
-          sccache: "true"
-          manylinux: musllinux_1_2
-          container: off
-          before-script-linux: ${{ matrix.platform.before-script }}
-      - uses: ./.github/actions/run-tests
-        with:
-          skip_tests: ${{ matrix.platform.skip_tests }}
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-musllinux-${{ matrix.platform.target }}
-          path: dist
+            manylinux: musllinux_1_2
+            is_musl: true
 
-  windows:
-    runs-on: ${{ matrix.platform.runner }}
-    strategy:
-      matrix:
-        platform:
+          # Windows
           - runner: windows-latest
             target: x64
-          # - runner: windows-latest
-          #   target: x86
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-          architecture: ${{ matrix.platform.target }}
-      - name: Build wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --find-interpreter
-          sccache: "true"
-      - uses: ./.github/actions/run-tests
-        with:
-          skip_tests: ${{ matrix.platform.skip_tests }}
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-windows-${{ matrix.platform.target }}
-          path: dist
 
-  macos:
-    runs-on: ${{ matrix.platform.runner }}
-    strategy:
-      matrix:
-        platform:
+          # macOS
           - runner: macos-12
             target: x86_64
           - runner: macos-14
             target: aarch64
+
+    container: ${{ matrix.platform.container }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
+
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --find-interpreter
           sccache: "true"
+          manylinux: ${{ matrix.platform.manylinux }}
+          container: ${{ matrix.platform.is_musl && 'off' || '' }}
+          before-script-linux: ${{ matrix.platform.before-script }}
+
       - uses: ./.github/actions/run-tests
         with:
           skip_tests: ${{ matrix.platform.skip_tests }}
+          is_musl: ${{ matrix.platform.is_musl }}
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-macos-${{ matrix.platform.target }}
+          name: wheels-${{ matrix.platform.runner }}-${{ matrix.platform.target }}
           path: dist
 
   sdist:
@@ -171,10 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     needs:
-      - linux
-      - musllinux
-      # - windows
-      - macos
+      - build
       - sdist
     permissions:
       # Use to sign the release artifacts
