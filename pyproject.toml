@@ -11,11 +11,11 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
-dependencies = ["numpy>=1.20.0", "cffi>=1.14.0"]
+dependencies = ["numpy>=1.20.0"]
 
-# Support multiple CPython versions with a single wheel
+# pyo3 bindings is the default for maturin
 [tool.maturin]
-bindings = "cffi"
+bindings = "pyo3"
 
 [project.optional-dependencies]
 dev = ["pytest>=6.0"]
