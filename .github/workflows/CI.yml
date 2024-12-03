@@ -51,7 +51,7 @@ jobs:
             target: x64
 
           # macOS
-          - runner: macos-12
+          - runner: macos-14
             target: x86_64
           - runner: macos-14
             target: aarch64
