@@ -15,5 +15,5 @@ omfiles-rs = { git = "https://github.com/terraputix/omfiles-rs", branch = "multi
 
 [features]
 abi3 = ["pyo3/abi3-py38"]
-extension-module = ["pyo3/extension-module"]
-default = ["extension-module", "abi3"]
+# extension-module = ["pyo3/extension-module"]
+default = ["abi3"]
