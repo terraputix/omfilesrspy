@@ -14,6 +14,7 @@ runs:
       if: ${{ inputs.skip_tests != 'true' }}
       shell: bash
       run: |
-        python -m pip install dist/*.whl
-        python -m pip install ".[dev]"
+        python -m pip install pytest numpy
+        # Install the wheel we just built (and only that wheel)
+        python -m pip install --no-index --find-links=dist/ omfilesrspy
         pytest tests/
