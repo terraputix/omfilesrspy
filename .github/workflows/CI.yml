@@ -29,6 +29,7 @@ jobs:
             before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
           - runner: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            skip_tests: true
             before-script: cat /etc/os-release && apt-get update && apt-get install --assume-yes --no-install-recommends crossbuild-essential-arm64 && clang --version
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +45,8 @@ jobs:
           manylinux: 2_28
           before-script-linux: ${{ matrix.platform.before-script }}
       - uses: ./.github/actions/run-tests
+        with:
+          skip_tests: ${{ matrix.platform.skip_tests }}
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -57,6 +60,7 @@ jobs:
         platform:
           - target: "x86_64-unknown-linux-musl"
             image_tag: "x86_64-musl"
+            skip_tests: true
             before-script: cat /etc/os-release && apt install clang -y
           # - target: "aarch64-unknown-linux-musl"
           #   image_tag: "aarch64-musl"
@@ -81,6 +85,8 @@ jobs:
           container: off
           before-script-linux: ${{ matrix.platform.before-script }}
       - uses: ./.github/actions/run-tests
+        with:
+          skip_tests: ${{ matrix.platform.skip_tests }}
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -109,6 +115,8 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: "true"
       - uses: ./.github/actions/run-tests
+        with:
+          skip_tests: ${{ matrix.platform.skip_tests }}
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -136,6 +144,8 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: "true"
       - uses: ./.github/actions/run-tests
+        with:
+          skip_tests: ${{ matrix.platform.skip_tests }}
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
