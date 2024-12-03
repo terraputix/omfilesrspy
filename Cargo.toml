@@ -9,6 +9,11 @@ name = "omfilesrspy"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.23", features = ["extension-module", "abi3-py37"] }
+pyo3 = "0.23"
 numpy = "0.23"
 omfiles-rs = { git = "https://github.com/terraputix/omfiles-rs", branch = "multidim-file-format" }
+
+[features]
+abi3-py37 = ["pyo3/abi3-py37"]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module", "abi3-py37"]

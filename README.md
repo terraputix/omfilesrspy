@@ -7,7 +7,7 @@
 python3 -m venv env
 source env/bin/activate
 
-pip install maturin
+pip install maturin numpy
 maturin develop
 # if you encounter an error:  Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
 unset CONDA_PREFIX
@@ -16,7 +16,7 @@ unset CONDA_PREFIX
 ### Tests
 
 ```bash
-cargo test
+cargo test --no-default-features
 ```
 
 ## Usage
