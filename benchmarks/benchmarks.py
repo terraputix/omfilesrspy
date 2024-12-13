@@ -9,7 +9,7 @@ import omfilesrspy as om
 from functools import wraps
 
 # Create a large NumPy array
-array_size = (1000, 10000)
+array_size = (1000, 1000)
 # Generate a sinusoidal curve with noise
 x = np.linspace(0, 2 * np.pi * (array_size[1] / 100), array_size[1])
 sinusoidal_data = 20 * np.sin(x) + 20  # Sinusoidal curve between -20 and 60
@@ -101,13 +101,14 @@ def write_om(data, chunk_size):
         data.shape[1],
         chunk_size[0],
         chunk_size[1],
-        1000,
+        10,
+        0,
     )
 
 
 @measure_time
 def read_om():
-    return om.read_om_file("data.om", 0, 1000, 0, 10000)
+    return om.read_om_file("data.om", 0, 1000, 0, 1000)
 
 
 # Measure times
