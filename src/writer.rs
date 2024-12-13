@@ -1,33 +1,43 @@
 use numpy::PyReadonlyArray2;
-use omfiles_rs::{core::compression::CompressionType, io::writer::OmFileWriter};
+use omfiles_rs::{core::compression::CompressionType, io::writer2::OmFileWriter2};
 use pyo3::prelude::*;
-use std::rc::Rc;
+use std::fs::File;
+
+/// Utility function to convert an OmFilesRsError to a PyRuntimeError
+fn convert_omfilesrs_error(e: omfiles_rs::errors::OmFilesRsError) -> PyErr {
+    PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())
+}
 
 pub fn write_om_file<'py>(
     file_path: &str,
     data: PyReadonlyArray2<'py, f32>,
-    dim0: usize,
-    dim1: usize,
-    chunk0: usize,
-    chunk1: usize,
-    scalefactor: f32,
+    dim0: u64,
+    dim1: u64,
+    chunk0: u64,
+    chunk1: u64,
+    scale_factor: f32,
+    add_offset: f32,
 ) -> PyResult<()> {
-    // FIXME: We don't want to copy data around!!!
-    let array = data.as_array();
-    // Convert Python sequence to Vec<f32>
-    let data_vec: Rc<Vec<f32>> = Rc::new(array.iter().copied().collect());
+    let initial_capacity = data.len()?;
+    let file_handle = File::create(file_path)?;
+    let mut file_writer = OmFileWriter2::new(&file_handle, initial_capacity as u64);
 
-    let writer = OmFileWriter::new(dim0, dim1, chunk0, chunk1);
+    let mut writer = file_writer
+        .prepare_array::<f32>(
+            vec![dim0, dim1],
+            vec![chunk0, chunk1],
+            CompressionType::P4nzdec256,
+            scale_factor,
+            add_offset,
+            256,
+        )
+        .map_err(convert_omfilesrs_error)?;
+
+    let array = data.as_slice().expect("No array found behind `data`");
 
     writer
-        .write_all_to_file(
-            file_path,
-            CompressionType::P4nzdec256,
-            scalefactor,
-            data_vec,
-            true,
-        )
-        .unwrap();
+        .write_data(array, None, None, None)
+        .map_err(convert_omfilesrs_error)?;
 
     Ok(())
 }
@@ -54,7 +64,8 @@ mod tests {
             let dim1 = 20;
             let chunk0 = 5;
             let chunk1 = 5;
-            let scalefactor = 1.0;
+            let scale_factor = 1.0;
+            let add_offset = 0.0;
 
             // Write data
             let result = write_om_file(
@@ -64,7 +75,8 @@ mod tests {
                 dim1,
                 chunk0,
                 chunk1,
-                scalefactor,
+                scale_factor,
+                add_offset,
             );
 
             assert!(result.is_ok());

@@ -26,13 +26,23 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
     fn write_om_file<'py>(
         file_path: &str,
         data: PyReadonlyArray2<'py, f32>,
-        dim0: usize,
-        dim1: usize,
-        chunk0: usize,
-        chunk1: usize,
-        scalefactor: f32,
+        dim0: u64,
+        dim1: u64,
+        chunk0: u64,
+        chunk1: u64,
+        scale_factor: f32,
+        add_offset: f32,
     ) -> PyResult<()> {
-        writer::write_om_file(file_path, data, dim0, dim1, chunk0, chunk1, scalefactor)
+        writer::write_om_file(
+            file_path,
+            data,
+            dim0,
+            dim1,
+            chunk0,
+            chunk1,
+            scale_factor,
+            add_offset,
+        )
     }
 
     Ok(())

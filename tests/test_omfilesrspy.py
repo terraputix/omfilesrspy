@@ -15,5 +15,6 @@ def test_write_om_file():
         dim1=10,
         chunk0=5,
         chunk1=5,
-        scalefactor=1.0
+        scale_factor=1.0,
+        add_offset=0.0
     )
