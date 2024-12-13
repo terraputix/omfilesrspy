@@ -1,6 +1,8 @@
 use numpy::{ndarray::Dim, PyArray, PyReadonlyArray2};
 use pyo3::prelude::*;
+mod errors;
 mod reader;
+mod test_utils;
 mod writer;
 
 /// A Python module implemented in Rust.
@@ -12,11 +14,11 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
     fn read_om_file<'py>(
         py: Python<'py>,
         file_path: &str,
-        dim0_start: usize,
-        dim0_end: usize,
-        dim1_start: usize,
-        dim1_end: usize,
-    ) -> Bound<'py, PyArray<f32, Dim<[usize; 1]>>> {
+        dim0_start: u64,
+        dim0_end: u64,
+        dim1_start: u64,
+        dim1_end: u64,
+    ) -> PyResult<Bound<'py, PyArray<f32, Dim<[usize; 1]>>>> {
         reader::read_om_file(py, file_path, dim0_start, dim0_end, dim1_start, dim1_end)
     }
 

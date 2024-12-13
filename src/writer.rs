@@ -3,10 +3,7 @@ use omfiles_rs::{core::compression::CompressionType, io::writer2::OmFileWriter2}
 use pyo3::prelude::*;
 use std::fs::File;
 
-/// Utility function to convert an OmFilesRsError to a PyRuntimeError
-fn convert_omfilesrs_error(e: omfiles_rs::errors::OmFilesRsError) -> PyErr {
-    PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())
-}
+use crate::errors::convert_omfilesrs_error;
 
 pub fn write_om_file<'py>(
     file_path: &str,
@@ -39,6 +36,14 @@ pub fn write_om_file<'py>(
         .write_data(array, None, None, None)
         .map_err(convert_omfilesrs_error)?;
 
+    let variable_meta = writer.finalize();
+    let variable = file_writer
+        .write_array(variable_meta, "data", &[])
+        .map_err(convert_omfilesrs_error)?;
+    file_writer
+        .write_trailer(variable)
+        .map_err(convert_omfilesrs_error)?;
+
     Ok(())
 }
 
@@ -49,7 +54,7 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn test_write_om_file() {
+    fn test_write_om_file() -> Result<(), Box<dyn std::error::Error>> {
         // Initialize Python
         pyo3::prepare_freethreaded_python();
 
@@ -85,5 +90,7 @@ mod tests {
             // Clean up
             fs::remove_file(file_path).unwrap();
         });
+
+        Ok(())
     }
 }
