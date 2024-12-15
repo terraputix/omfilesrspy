@@ -94,13 +94,10 @@ def read_netcdf():
 
 @measure_time
 def write_om(data, chunk_size):
-    om.write_om_file(
-        "data.om",
+    writer = om.OmFilePyWriter("data.om")
+    writer.write_array(
         data,
-        data.shape[0],
-        data.shape[1],
-        chunk_size[0],
-        chunk_size[1],
+        chunk_size,
         100,
         0,
     )
