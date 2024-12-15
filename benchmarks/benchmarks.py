@@ -67,7 +67,7 @@ def write_zarr(data, chunk_size):
 @measure_time
 def read_zarr():
     z = zarr.open("data.zarr", mode='r')
-    return z['arr_0'][:]
+    return z['arr_0'][:, 5:10]
 
 
 @measure_time
@@ -125,11 +125,11 @@ for fmt, (write_func, read_func) in formats.items():
     )
     read_data, results[fmt]["read_time"], results[fmt]["cpu_read_time"] = read_func()
 
-    if read_data.shape == (1000, 10000):
+    if read_data.shape == array_size:
         # Print the first five elements of the read data
         print(f"{fmt} first five elements: {read_data[0, :5]}")
     else:
-        print(f"{fmt} read data shape: {read_data[:5]}")
+        print(f"Erorr: {fmt} read data shape is {read_data.shape}")
 
 # Print results
 for fmt, times in results.items():
