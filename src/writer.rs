@@ -78,8 +78,6 @@ mod tests {
             // Test parameters
             let file_path = "test_data.om";
             let dimensions = vec![10, 20];
-            // let dim0 = 10;
-            // let dim1 = 20;
             let chunks = vec![5u64, 5];
             let scale_factor = 1.0;
             let add_offset = 0.0;
