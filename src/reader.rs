@@ -1,5 +1,8 @@
 use crate::errors::convert_omfilesrs_error;
-use numpy::{ndarray::Dim, IntoPyArray, PyArray};
+use numpy::{
+    ndarray::{Array2, Dim},
+    IntoPyArray, PyArray,
+};
 use omfiles_rs::io::reader2::OmFileReader2;
 use pyo3::prelude::*;
 
@@ -10,13 +13,20 @@ pub fn read_om_file<'py>(
     dim0_end: u64,
     dim1_start: u64,
     dim1_end: u64,
-) -> PyResult<Bound<'py, PyArray<f32, Dim<[usize; 1]>>>> {
+) -> PyResult<Bound<'py, PyArray<f32, Dim<[usize; 2]>>>> {
     let reader = OmFileReader2::from_file(file_path).map_err(convert_omfilesrs_error)?;
-    let data = reader
+    let flat_data = reader
         .read_simple(&[dim0_start..dim0_end, dim1_start..dim1_end], None, None)
         .map_err(convert_omfilesrs_error)?;
 
-    Ok(data.into_pyarray(py))
+    let rows = (dim0_end - dim0_start) as usize;
+    let cols = (dim1_end - dim1_start) as usize;
+
+    // Create a 2D array from the flat data
+    let array = Array2::from_shape_vec((rows, cols), flat_data)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
+    Ok(array.into_pyarray(py))
 }
 
 #[cfg(test)]

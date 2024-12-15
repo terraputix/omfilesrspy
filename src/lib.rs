@@ -18,7 +18,7 @@ fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
         dim0_end: u64,
         dim1_start: u64,
         dim1_end: u64,
-    ) -> PyResult<Bound<'py, PyArray<f32, Dim<[usize; 1]>>>> {
+    ) -> PyResult<Bound<'py, PyArray<f32, Dim<[usize; 2]>>>> {
         reader::read_om_file(py, file_path, dim0_start, dim0_end, dim1_start, dim1_end)
     }
 
