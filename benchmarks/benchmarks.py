@@ -52,7 +52,7 @@ def write_hdf5(data, chunk_size):
 @measure_time
 def read_hdf5():
     with h5py.File("data.h5", "r") as f:
-        return f["dataset"][:]
+        return f["dataset"][:, 5:10]
 
 
 @measure_time
@@ -66,8 +66,8 @@ def write_zarr(data, chunk_size):
 
 @measure_time
 def read_zarr():
-    data = zarr.load("data.zarr", path="arr_0")
-    return data
+    z = zarr.open("data.zarr", mode='r')
+    return z['arr_0'][:]
 
 
 @measure_time
@@ -89,7 +89,7 @@ def write_netcdf(data, chunk_size):
 @measure_time
 def read_netcdf():
     with nc.Dataset("data.nc", "r") as ds:
-        return ds.variables["dataset"][:]
+        return ds.variables["dataset"][:, 5:10]
 
 
 @measure_time
@@ -108,7 +108,8 @@ def write_om(data, chunk_size):
 
 @measure_time
 def read_om():
-    return om.read_om_file("data.om", 0, 1000, 0, 10000)
+    reader = om.OmFilePyReader("data.om")
+    return reader[:, 5:10]
 
 
 # Measure times
