@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 mod array_index;
 mod errors;
+mod fsspec_backend;
 mod reader;
 mod test_utils;
 mod writer;
