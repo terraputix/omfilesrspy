@@ -106,7 +106,7 @@ def write_om(data, chunk_size):
 @measure_time
 def read_om():
     reader = om.OmFilePyReader("data.om")
-    return reader[-2:-1, 5:10]
+    return reader[:, 5:10]
 
 
 # Measure times
