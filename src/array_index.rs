@@ -22,40 +22,30 @@ pub struct ArrayIndex(pub Vec<IndexType>);
 
 impl<'py> FromPyObject<'py> for ArrayIndex {
     fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
-        if let Ok(tuple) = ob.downcast::<pyo3::types::PyTuple>() {
-            let mut indices = Vec::new();
-
-            for item in tuple.iter() {
-                let idx = if item.is_instance_of::<pyo3::types::PySlice>() {
-                    let slice = item.downcast::<pyo3::types::PySlice>()?;
-                    let start = slice.getattr("start")?.extract()?;
-                    let stop = slice.getattr("stop")?.extract()?;
-                    let step = slice.getattr("step")?.extract()?;
-                    IndexType::Slice { start, stop, step }
-                // } else if item.is_instance_of::<pyo3::types::PyEllipsis>() {
-                //     IndexType::Ellipsis
-                } else if item.is_none() {
-                    IndexType::NewAxis
-                } else {
-                    IndexType::Int(item.extract()?)
-                };
-                indices.push(idx);
-            }
-
-            Ok(ArrayIndex(indices))
-        } else {
-            let idx = if ob.is_instance_of::<pyo3::types::PySlice>() {
-                let slice = ob.downcast::<pyo3::types::PySlice>()?;
+        fn parse_index(item: &Bound<'_, PyAny>) -> PyResult<IndexType> {
+            if item.is_instance_of::<pyo3::types::PySlice>() {
+                let slice = item.downcast::<pyo3::types::PySlice>()?;
                 let start = slice.getattr("start")?.extract()?;
                 let stop = slice.getattr("stop")?.extract()?;
                 let step = slice.getattr("step")?.extract()?;
-                IndexType::Slice { start, stop, step }
-            } else if ob.is_none() {
-                IndexType::NewAxis
+                Ok(IndexType::Slice { start, stop, step })
+            // } else if item.is_instance_of::<pyo3::types::PyEllipsis>() {
+            //     Ok(IndexType::Ellipsis)
+            } else if item.is_none() {
+                Ok(IndexType::NewAxis)
             } else {
-                IndexType::Int(ob.extract()?)
-            };
-            Ok(ArrayIndex(vec![idx]))
+                Ok(IndexType::Int(item.extract()?))
+            }
+        }
+
+        if let Ok(tuple) = ob.downcast::<pyo3::types::PyTuple>() {
+            let indices = tuple
+                .iter()
+                .map(|idx| parse_index(&idx))
+                .collect::<PyResult<Vec<_>>>()?;
+            Ok(ArrayIndex(indices))
+        } else {
+            Ok(ArrayIndex(vec![parse_index(ob)?]))
         }
     }
 }
