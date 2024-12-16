@@ -286,6 +286,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_input() {
+        pyo3::prepare_freethreaded_python();
+
         Python::with_gil(|py| {
             let invalid_value = "not_an_index"
                 .into_pyobject(py)
