@@ -1,7 +1,8 @@
 use pyo3::prelude::*;
 use std::ops::Range;
 
-/// A simplified numpy-like array indexing implementation.
+/// A simplified numpy-like array basic indexing implementation.
+/// Compare https://numpy.org/doc/stable/user/basics.indexing.html.
 /// Supports integer, slice, and newaxis indexing.
 /// Currently does not support ellipsis, boolean, or integer array indexing.
 #[derive(Debug)]
@@ -14,8 +15,6 @@ pub enum IndexType {
     },
     NewAxis,
     // Ellipsis,
-    // Boolean(Array<bool, Ix1>),
-    // IntArray(Array<i64, Ix1>),
 }
 
 #[derive(Debug)]
@@ -37,10 +36,6 @@ impl<'py> FromPyObject<'py> for ArrayIndex {
                 //     IndexType::Ellipsis
                 } else if item.is_none() {
                     IndexType::NewAxis
-                // } else if let Ok(array) = item.extract::<ArrayView<bool, Ix1>>() {
-                //     IndexType::Boolean(array.to_owned())
-                // } else if let Ok(array) = item.extract::<ArrayView<i64, Ix1>>() {
-                //     IndexType::IntArray(array.to_owned())
                 } else {
                     IndexType::Int(item.extract()?)
                 };
