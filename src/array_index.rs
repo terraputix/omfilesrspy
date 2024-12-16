@@ -79,15 +79,14 @@ impl ArrayIndex {
                 "Not enough indices for array",
             ));
         }
-        self.validate_against_shape(shape)?;
 
         let mut ranges = Vec::new();
         let mut shape_idx = 0;
 
-        for idx in &self.0 {
+        for (idx, &dim_size) in self.0.iter().zip(shape.iter()) {
             match idx {
                 IndexType::Int(i) => {
-                    let normalized_idx = Self::normalize_index(*i, shape[shape_idx])?;
+                    let normalized_idx = Self::normalize_index(*i, dim_size)?;
                     ranges.push(Range {
                         start: normalized_idx,
                         end: normalized_idx + 1,
@@ -95,17 +94,43 @@ impl ArrayIndex {
                     shape_idx += 1;
                 }
                 IndexType::Slice { start, stop, step } => {
-                    let dim_size = shape[shape_idx];
+                    if let Some(step) = step {
+                        if *step != 1 {
+                            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                                "Slice step must be 1",
+                            ));
+                        }
+                    }
 
-                    // Handle start
                     let start_idx = match start {
-                        Some(s) => Self::normalize_index(*s, dim_size)?,
+                        Some(s) => {
+                            let normalized = Self::normalize_index(*s, dim_size)?;
+                            if normalized > dim_size {
+                                return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                                    format!(
+                                        "Index {} is out of bounds for axis with size {}",
+                                        s, dim_size
+                                    ),
+                                ));
+                            }
+                            normalized
+                        }
                         None => 0,
                     };
 
-                    // Handle stop
                     let stop_idx = match stop {
-                        Some(s) => Self::normalize_index(*s, dim_size)?,
+                        Some(s) => {
+                            let normalized = Self::normalize_index(*s, dim_size)?;
+                            if normalized > dim_size {
+                                return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
+                                    format!(
+                                        "Index {} is out of bounds for axis with size {}",
+                                        s, dim_size
+                                    ),
+                                ));
+                            }
+                            normalized
+                        }
                         None => dim_size,
                     };
 
@@ -113,15 +138,6 @@ impl ArrayIndex {
                         return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                             "omfiles currently do not support reversed ranges.",
                         ));
-                    }
-
-                    // Validate step (already checked in validate_against_shape)
-                    if let Some(step) = step {
-                        if *step != 1 {
-                            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                                "Slice step must be 1",
-                            ));
-                        }
                     }
 
                     ranges.push(Range {
@@ -133,7 +149,7 @@ impl ArrayIndex {
                 IndexType::NewAxis => {
                     ranges.push(Range {
                         start: 0,
-                        end: shape[shape_idx],
+                        end: dim_size,
                     });
                 }
             }
@@ -163,48 +179,6 @@ impl ArrayIndex {
         }
 
         Ok(normalized as u64)
-    }
-
-    pub fn validate_against_shape(&self, shape: &Vec<u64>) -> PyResult<()> {
-        for (idx, &dim_size) in self.0.iter().zip(shape.iter()) {
-            match idx {
-                IndexType::Int(i) => {
-                    // Use normalize_index for validation
-                    Self::normalize_index(*i, dim_size)?;
-                }
-                IndexType::Slice { start, stop, step } => {
-                    if let Some(start) = start {
-                        Self::normalize_index(*start, dim_size)?;
-                        let dim_size = dim_size as i64;
-                        if start > &dim_size {
-                            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(format!(
-                                "Index {} is out of bounds for axis with size {}",
-                                start, dim_size
-                            )));
-                        }
-                    }
-                    if let Some(stop) = stop {
-                        Self::normalize_index(*stop, dim_size)?;
-                        let dim_size = dim_size as i64;
-                        if stop > &dim_size {
-                            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(format!(
-                                "Index {} is out of bounds for axis with size {}",
-                                stop, dim_size
-                            )));
-                        }
-                    }
-                    if let Some(step) = step {
-                        if *step != 1 {
-                            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                                "Slice step must be 1",
-                            ));
-                        }
-                    }
-                }
-                IndexType::NewAxis => continue,
-            }
-        }
-        Ok(())
     }
 }
 
