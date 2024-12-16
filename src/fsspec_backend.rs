@@ -75,4 +75,26 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_fsspec_s3_new() -> Result<(), Box<dyn Error>> {
+        pyo3::prepare_freethreaded_python();
+
+        Python::with_gil(|py| -> Result<(), Box<dyn Error>> {
+            let kwargs = PyDict::new(py);
+            kwargs.set_item("anon", true)?;
+
+            let file = FsSpecBackend::new(
+                "openmeteo/data/dwd_icon_d2/temperature_2m/chunk_3980.om",
+                Some("s3"),
+                Some(&kwargs),
+            )?;
+
+            assert_eq!(file.file_size, 34479300);
+
+            Ok(())
+        })?;
+
+        Ok(())
+    }
 }
