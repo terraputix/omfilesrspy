@@ -180,15 +180,23 @@ mod tests {
                 .map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Read a small section of data
-            let ranges = vec![Range { start: 0, end: 2 }, Range { start: 0, end: 2 }];
+            let ranges = vec![
+                Range {
+                    start: 57812,
+                    end: 57813,
+                },
+                Range { start: 0, end: 100 },
+            ];
 
             let data = reader
                 .read_simple(&ranges, None, None)
                 .map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Verify we got some data
-            assert!(!data.is_empty());
-            println!("First few values: {:?}", &data[..4]);
+            assert_eq!(
+                &data[..10],
+                &[18.0, 17.7, 17.65, 17.45, 17.15, 17.6, 18.7, 20.75, 21.7, 22.65]
+            );
 
             Ok(())
         })?;
