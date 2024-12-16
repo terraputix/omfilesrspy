@@ -87,14 +87,10 @@ impl ArrayIndex {
         for idx in &self.0 {
             match idx {
                 IndexType::Int(i) => {
-                    let i = if *i < 0 {
-                        (shape[shape_idx] as i64 + *i) as u64
-                    } else {
-                        *i as u64
-                    };
+                    let normalized_idx = Self::normalize_index(*i, shape[shape_idx])?;
                     ranges.push(Range {
-                        start: i,
-                        end: i + 1,
+                        start: normalized_idx,
+                        end: normalized_idx + 1,
                     });
                     shape_idx += 1;
                 }
@@ -103,27 +99,21 @@ impl ArrayIndex {
 
                     // Handle start
                     let start_idx = match start {
-                        Some(s) => {
-                            if *s < 0 {
-                                ((dim_size as i64) + s) as u64
-                            } else {
-                                *s as u64
-                            }
-                        }
+                        Some(s) => Self::normalize_index(*s, dim_size)?,
                         None => 0,
                     };
 
                     // Handle stop
                     let stop_idx = match stop {
-                        Some(s) => {
-                            if *s < 0 {
-                                ((dim_size as i64) + s) as u64
-                            } else {
-                                *s as u64
-                            }
-                        }
+                        Some(s) => Self::normalize_index(*s, dim_size)?,
                         None => dim_size,
                     };
+
+                    if stop_idx <= start_idx {
+                        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                            "omfiles currently do not support reversed ranges.",
+                        ));
+                    }
 
                     // Validate step (already checked in validate_against_shape)
                     if let Some(step) = step {
@@ -134,7 +124,6 @@ impl ArrayIndex {
                         }
                     }
 
-                    // Create range
                     ranges.push(Range {
                         start: start_idx,
                         end: stop_idx,
@@ -142,7 +131,6 @@ impl ArrayIndex {
                     shape_idx += 1;
                 }
                 IndexType::NewAxis => {
-                    // NewAxis returns the full dimension
                     ranges.push(Range {
                         start: 0,
                         end: shape[shape_idx],
@@ -163,22 +151,32 @@ impl ArrayIndex {
         Ok(ranges)
     }
 
+    fn normalize_index(idx: i64, dim_size: u64) -> PyResult<u64> {
+        let dim_size_i64 = dim_size as i64;
+        let normalized = if idx < 0 { idx + dim_size_i64 } else { idx };
+
+        if normalized < 0 || normalized > dim_size_i64 {
+            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(format!(
+                "Index {} is out of bounds for axis with size {}",
+                idx, dim_size
+            )));
+        }
+
+        Ok(normalized as u64)
+    }
+
     pub fn validate_against_shape(&self, shape: &Vec<u64>) -> PyResult<()> {
         for (idx, &dim_size) in self.0.iter().zip(shape.iter()) {
             match idx {
                 IndexType::Int(i) => {
-                    let i = *i as u64;
-                    if i >= dim_size {
-                        return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(format!(
-                            "Index {} is out of bounds for axis with size {}",
-                            i, dim_size
-                        )));
-                    }
+                    // Use normalize_index for validation
+                    Self::normalize_index(*i, dim_size)?;
                 }
                 IndexType::Slice { start, stop, step } => {
                     if let Some(start) = start {
-                        let start = *start as u64;
-                        if start > dim_size {
+                        Self::normalize_index(*start, dim_size)?;
+                        let dim_size = dim_size as i64;
+                        if start > &dim_size {
                             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(format!(
                                 "Index {} is out of bounds for axis with size {}",
                                 start, dim_size
@@ -186,8 +184,9 @@ impl ArrayIndex {
                         }
                     }
                     if let Some(stop) = stop {
-                        let stop = *stop as u64;
-                        if stop > dim_size {
+                        Self::normalize_index(*stop, dim_size)?;
+                        let dim_size = dim_size as i64;
+                        if stop > &dim_size {
                             return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(format!(
                                 "Index {} is out of bounds for axis with size {}",
                                 stop, dim_size
@@ -298,6 +297,34 @@ mod tests {
     }
 
     #[test]
+    fn test_negative_indexing() {
+        pyo3::prepare_freethreaded_python();
+
+        Python::with_gil(|py| {
+            let shape = vec![5];
+
+            // Test negative integer index
+            let neg_idx = (-2i64).into_pyobject(py).unwrap();
+            let neg_tuple = pyo3::types::PyTuple::new(py, &[neg_idx.as_ref()]).unwrap();
+            let index = ArrayIndex::extract_bound(neg_tuple.as_ref()).unwrap();
+            let ranges = index
+                .to_read_range(&shape)
+                .expect("Could not convert to read_range!");
+            assert_eq!(ranges[0].start, 3); // -2 should map to index 3 in size 5
+
+            // Test negative slice indices
+            let slice = PySlice::new(py, -3, -1, 1);
+            let slice_tuple = pyo3::types::PyTuple::new(py, &[slice.as_ref()]).unwrap();
+            let index = ArrayIndex::extract_bound(slice_tuple.as_ref()).unwrap();
+            let ranges = index
+                .to_read_range(&shape)
+                .expect("Could not convert to read_range!");
+            assert_eq!(ranges[0].start, 2); // -3 should map to index 2
+            assert_eq!(ranges[0].end, 4); // -1 should map to index 4
+        });
+    }
+
+    #[test]
     #[should_panic]
     fn test_invalid_input() {
         Python::with_gil(|py| {
@@ -307,6 +334,34 @@ mod tests {
             let invalid_tuple = pyo3::types::PyTuple::new(py, &[invalid_value.as_ref()])
                 .expect("Failed to create tuple");
             let _should_fail = ArrayIndex::extract_bound(invalid_tuple.as_ref()).unwrap();
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_negative_index() {
+        pyo3::prepare_freethreaded_python();
+
+        Python::with_gil(|py| {
+            let shape = vec![5];
+            let neg_idx = (-6i64).into_pyobject(py).unwrap();
+            let neg_tuple = pyo3::types::PyTuple::new(py, &[neg_idx.as_ref()]).unwrap();
+            let index = ArrayIndex::extract_bound(neg_tuple.as_ref()).unwrap();
+            let _should_fail = index.to_read_range(&shape).unwrap();
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_slice() {
+        pyo3::prepare_freethreaded_python();
+
+        Python::with_gil(|py| {
+            let shape = vec![5];
+            let neg_idx = (-6i64).into_pyobject(py).unwrap();
+            let neg_tuple = pyo3::types::PyTuple::new(py, &[neg_idx.as_ref()]).unwrap();
+            let index = ArrayIndex::extract_bound(neg_tuple.as_ref()).unwrap();
+            let _should_fail = index.to_read_range(&shape).unwrap();
         });
     }
 }

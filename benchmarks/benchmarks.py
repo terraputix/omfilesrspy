@@ -89,7 +89,7 @@ def write_netcdf(data, chunk_size):
 @measure_time
 def read_netcdf():
     with nc.Dataset("data.nc", "r") as ds:
-        return ds.variables["dataset"][:, 5:10]
+        return ds.variables["dataset"][-1, 5:10]
 
 
 @measure_time
@@ -106,7 +106,7 @@ def write_om(data, chunk_size):
 @measure_time
 def read_om():
     reader = om.OmFilePyReader("data.om")
-    return reader[:, 5:10]
+    return reader[-2:-1, 5:10]
 
 
 # Measure times
