@@ -1,28 +1,55 @@
-use crate::errors::convert_omfilesrs_error;
-use numpy::{ndarray::Dim, IntoPyArray, PyArray};
-use omfiles_rs::io::reader2::OmFileReader2;
+use crate::{array_index::ArrayIndex, errors::convert_omfilesrs_error};
+use numpy::{ndarray::ArrayD, IntoPyArray, PyArrayDyn};
+use omfiles_rs::{backend::mmapfile::MmapFile, io::reader2::OmFileReader2};
 use pyo3::prelude::*;
 
-pub fn read_om_file<'py>(
-    py: Python<'py>,
-    file_path: &str,
-    dim0_start: u64,
-    dim0_end: u64,
-    dim1_start: u64,
-    dim1_end: u64,
-) -> PyResult<Bound<'py, PyArray<f32, Dim<[usize; 1]>>>> {
-    let reader = OmFileReader2::from_file(file_path).map_err(convert_omfilesrs_error)?;
-    let data = reader
-        .read_simple(&[dim0_start..dim0_end, dim1_start..dim1_end], None, None)
-        .map_err(convert_omfilesrs_error)?;
+#[pyclass]
+pub struct OmFilePyReader {
+    reader: OmFileReader2<MmapFile>,
+    shape: Vec<u64>,
+}
 
-    Ok(data.into_pyarray(py))
+unsafe impl Send for OmFilePyReader {}
+unsafe impl Sync for OmFilePyReader {}
+
+#[pymethods]
+impl OmFilePyReader {
+    #[new]
+    fn new(file_path: &str) -> PyResult<Self> {
+        let reader = OmFileReader2::from_file(file_path).map_err(convert_omfilesrs_error)?;
+        let shape = reader.get_dimensions().to_vec();
+
+        Ok(Self { reader, shape })
+    }
+
+    fn __getitem__<'py>(
+        &self,
+        py: Python<'py>,
+        ranges: ArrayIndex,
+    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
+        let read_ranges = ranges.to_read_range(&self.shape)?;
+
+        let flat_data = self
+            .reader
+            .read_simple(&read_ranges, None, None)
+            .map_err(convert_omfilesrs_error)?;
+
+        let shape: Vec<usize> = read_ranges
+            .iter()
+            .map(|range| (range.end - range.start) as usize)
+            .collect();
+
+        let array = ArrayD::from_shape_vec(shape, flat_data)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
+        Ok(array.into_pyarray(py))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::create_binary_file;
+    use crate::{array_index::IndexType, test_utils::create_binary_file};
     use numpy::PyArrayMethods;
 
     #[test]
@@ -40,19 +67,27 @@ mod tests {
         )?;
 
         let file_path = "test_files/read_test.om";
-        let dim0_start = 0;
-        let dim0_end = 5;
-        let dim1_start = 0;
-        let dim1_end = 5;
 
         // Initialize Python
         pyo3::prepare_freethreaded_python();
 
         Python::with_gil(|py| {
-            let data =
-                read_om_file(py, file_path, dim0_start, dim0_end, dim1_start, dim1_end).unwrap();
+            let reader = OmFilePyReader::new(file_path).unwrap();
+            let ranges = ArrayIndex(vec![
+                IndexType::Slice {
+                    start: Some(0),
+                    stop: Some(5),
+                    step: None,
+                },
+                IndexType::Slice {
+                    start: Some(0),
+                    stop: Some(5),
+                    step: None,
+                },
+            ]);
+            let data = reader.__getitem__(py, ranges).expect("Could not get item!");
             let read_only = data.readonly();
-            let data = read_only.as_slice().unwrap();
+            let data = read_only.as_slice().expect("Could not convert to slice!");
             let expected_data = vec![
                 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0,
                 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0,
