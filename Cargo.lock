@@ -310,7 +310,7 @@ dependencies = [
 [[package]]
 name = "omfiles-rs"
 version = "0.1.0"
-source = "git+https://github.com/terraputix/omfiles-rs?branch=multidim-file-format#2d9307bf9fd35dd0636af7b3549930193fed4f5a"
+source = "git+https://github.com/terraputix/omfiles-rs?branch=multidim-file-format#8cd4e0edee723cb8f0641c4d35d606b0bff54bb5"
 dependencies = [
  "memmap2",
  "omfileformatc-rs",
