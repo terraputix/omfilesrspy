@@ -29,24 +29,13 @@ impl FsSpecBackend {
             } else {
                 path_buf
             };
-
-            // Use fsspec for string paths
-            let fsspec = py.import("fsspec")?;
-
             // Determine protocol and path
-            let (protocol, final_path) = if let Some(proto) = protocol {
-                (proto, absolute_path.to_string_lossy().to_string())
-            } else {
-                ("file", absolute_path.to_string_lossy().to_string())
-            };
+            let protocol = protocol.map_or("file", |p| p);
+            let final_path = absolute_path.to_string_lossy().to_string();
 
-            // Create filesystem with specified protocol
-            let fs = if let Some(kwargs) = kwargs {
-                fsspec.call_method("filesystem", (protocol,), Some(kwargs))?
-            } else {
-                fsspec.call_method("filesystem", (protocol,), None)?
-            };
-
+            // Create fs and "open" the file
+            let fsspec = py.import("fsspec")?;
+            let fs = fsspec.call_method("filesystem", (protocol,), kwargs)?;
             let py_file = fs.call_method("open", (final_path,), None)?;
             // Get file size
             let info = fs.call_method("info", (path,), None)?;
