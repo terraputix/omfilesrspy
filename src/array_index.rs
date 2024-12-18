@@ -14,7 +14,7 @@ pub enum IndexType {
         step: Option<i64>,
     },
     NewAxis,
-    // Ellipsis,
+    Ellipsis,
 }
 
 #[derive(Debug)]
@@ -29,8 +29,8 @@ impl<'py> FromPyObject<'py> for ArrayIndex {
                 let stop = slice.getattr("stop")?.extract()?;
                 let step = slice.getattr("step")?.extract()?;
                 Ok(IndexType::Slice { start, stop, step })
-            // } else if item.is_instance_of::<pyo3::types::PyEllipsis>() {
-            //     Ok(IndexType::Ellipsis)
+            } else if item.is_instance_of::<pyo3::types::PyEllipsis>() {
+                Ok(IndexType::Ellipsis)
             } else if item.is_none() {
                 Ok(IndexType::NewAxis)
             } else {
@@ -59,17 +59,34 @@ impl ArrayIndex {
             ));
         }
 
-        if self.0.len() < shape.len() {
-            return Err(PyErr::new::<pyo3::exceptions::PyIndexError, _>(
-                "Not enough indices for array",
-            ));
-        }
-
         let mut ranges = Vec::new();
         let mut shape_idx = 0;
+        let mut ellipsis_seen = false;
+        let explicit_dims: usize = self
+            .0
+            .iter()
+            .filter(|&x| !matches!(x, IndexType::Ellipsis))
+            .count();
+        let ellipsis_dims = shape.len().saturating_sub(explicit_dims);
 
         for (idx, &dim_size) in self.0.iter().zip(shape.iter()) {
             match idx {
+                IndexType::Ellipsis => {
+                    if ellipsis_seen {
+                        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                            "Only one ellipsis allowed in index",
+                        ));
+                    }
+                    // Add full ranges for all dimensions represented by the ellipsis
+                    for _ in 0..ellipsis_dims {
+                        ranges.push(Range {
+                            start: 0,
+                            end: shape[shape_idx],
+                        });
+                        shape_idx += 1;
+                    }
+                    ellipsis_seen = true;
+                }
                 IndexType::Int(i) => {
                     let normalized_idx = Self::normalize_index(*i, dim_size)?;
                     ranges.push(Range {
@@ -170,7 +187,7 @@ impl ArrayIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pyo3::types::PySlice;
+    use pyo3::{types::PySlice, BoundObject};
 
     #[test]
     fn test_numpy_indexing() {
@@ -280,6 +297,49 @@ mod tests {
                 .expect("Could not convert to read_range!");
             assert_eq!(ranges[0].start, 2); // -3 should map to index 2
             assert_eq!(ranges[0].end, 4); // -1 should map to index 4
+        });
+    }
+
+    #[test]
+    fn test_ellipsis() {
+        pyo3::prepare_freethreaded_python();
+
+        Python::with_gil(|py| {
+            let shape = vec![2, 3, 4, 5];
+            let ellipsis = pyo3::types::PyEllipsis::get(py).into_any();
+
+            // Test ..., 1
+            let tuple = pyo3::types::PyTuple::new(
+                py,
+                &[&ellipsis, 1i64.into_pyobject(py).unwrap().as_ref()],
+            )
+            .unwrap();
+            let index = ArrayIndex::extract_bound(tuple.as_ref()).unwrap();
+            let ranges = index.to_read_range(&shape).unwrap();
+            assert_eq!(ranges.len(), 4);
+            assert_eq!(ranges[0], Range { start: 0, end: 2 });
+            assert_eq!(ranges[1], Range { start: 0, end: 3 });
+            assert_eq!(ranges[2], Range { start: 0, end: 4 });
+            assert_eq!(ranges[3], Range { start: 1, end: 2 });
+
+            // Test 1, ..., 2
+            let tuple = pyo3::types::PyTuple::new(
+                py,
+                &[
+                    1i64.into_pyobject(py).unwrap().as_ref(),
+                    &ellipsis,
+                    2i64.into_pyobject(py).unwrap().as_ref(),
+                ],
+            )
+            .unwrap();
+            let index = ArrayIndex::extract_bound(tuple.as_ref()).unwrap();
+            let ranges = index.to_read_range(&shape).unwrap();
+
+            assert_eq!(ranges.len(), 4);
+            assert_eq!(ranges[0], Range { start: 1, end: 2 });
+            assert_eq!(ranges[1], Range { start: 0, end: 3 });
+            assert_eq!(ranges[2], Range { start: 0, end: 4 });
+            assert_eq!(ranges[3], Range { start: 2, end: 3 });
         });
     }
 
