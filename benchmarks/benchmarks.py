@@ -9,19 +9,19 @@ import omfilesrspy as om
 from functools import wraps
 
 # Create a large NumPy array
-array_size = (1000, 10000)
+array_size = (10, 10, 1, 10, 10, 10)
 # Generate a sinusoidal curve with noise
 x = np.linspace(0, 2 * np.pi * (array_size[1] / 100), array_size[1])
 sinusoidal_data = 20 * np.sin(x) + 20  # Sinusoidal curve between -20 and 60
 noise = np.random.normal(0, 5, array_size)  # Add some noise
 data = (sinusoidal_data + noise).astype(np.float32)
 
+# Define chunk size
+chunk_size = (10, 5, 1, 1, 1, 1)
+
 print("Data shape:", data.shape)
 print("Data type:", data.dtype)
-
-# Define chunk size
-chunk_size = (100, 100)
-
+print("Chunk size:", chunk_size)
 
 # Decorator to measure execution time
 def measure_time(func):
@@ -52,7 +52,7 @@ def write_hdf5(data, chunk_size):
 @measure_time
 def read_hdf5():
     with h5py.File("data.h5", "r") as f:
-        return f["dataset"][:, 5:10]
+        return f["dataset"][0, 0, 0, 0, ...]
 
 
 @measure_time
@@ -67,18 +67,21 @@ def write_zarr(data, chunk_size):
 @measure_time
 def read_zarr():
     z = zarr.open("data.zarr", mode='r')
-    return z['arr_0'][:, 5:10]
+    return z['arr_0'][0, 0, 0, 0, ...]
 
 
 @measure_time
 def write_netcdf(data, chunk_size):
     with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
-        ds.createDimension("dim1", data.shape[0])
-        ds.createDimension("dim2", data.shape[1])
+        dimension_names = ()
+        for dim in range(data.ndim):
+            ds.createDimension(f"dim{dim}", data.shape[dim])
+            dimension_names += (f"dim{dim}",)
+
         var = ds.createVariable(
             "dataset",
             np.float32,
-            ("dim1", "dim2"),
+            dimension_names,
             chunksizes=chunk_size,
             # zlib=True,
             # complevel=9,
@@ -89,7 +92,7 @@ def write_netcdf(data, chunk_size):
 @measure_time
 def read_netcdf():
     with nc.Dataset("data.nc", "r") as ds:
-        return ds.variables["dataset"][-1, 5:10]
+        return ds.variables["dataset"][0, 0, 0, 0, ...]
 
 
 @measure_time
@@ -106,7 +109,7 @@ def write_om(data, chunk_size):
 @measure_time
 def read_om():
     reader = om.OmFilePyReader("data.om")
-    return reader[:, 5:10]
+    return reader[0, 0, 0, 0, ...]
 
 
 # Measure times
@@ -129,7 +132,8 @@ for fmt, (write_func, read_func) in formats.items():
         # Print the first five elements of the read data
         print(f"{fmt} first five elements: {read_data[0, :5]}")
     else:
-        print(f"Erorr: {fmt} read data shape is {read_data.shape}")
+        print(f"    {fmt} read data shape is {read_data.shape}")
+        print(f"{read_data}")
 
 # Print results
 for fmt, times in results.items():
