@@ -8,7 +8,7 @@ python3 -m venv env
 source env/bin/activate
 
 pip install maturin
-maturin develop
+maturin develop --extras=dev
 # if you encounter an error:  Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
 unset CONDA_PREFIX
 ```
@@ -16,7 +16,7 @@ unset CONDA_PREFIX
 ### Tests
 
 ```bash
-cargo test
+cargo test --no-default-features
 ```
 
 ## Usage
@@ -25,4 +25,18 @@ cargo test
 import omfilesrspy
 
 omfilesrspy.read_om_file("test_file.om")
+```
+
+## Benchmarks
+
+Before running the benchmarks, make sure to compile the release version of the library:
+
+```bash
+maturin develop --release
+```
+
+Then run the benchmarks:
+
+```bash
+python benchmarks/benchmarks.py
 ```

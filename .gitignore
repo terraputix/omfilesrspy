@@ -1,4 +1,9 @@
 test_file.om
+data.h5
+data.nc
+data.om
+data.zarr/
+test_files/
 Cross.toml
 
 /target
