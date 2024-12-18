@@ -28,18 +28,20 @@ impl OmFilePyReader {
         ranges: ArrayIndex,
     ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
         let read_ranges = ranges.to_read_range(&self.shape)?;
+        // We only add dimensions that are no singleton dimensions to the output shape
+        // This is basically a dimensional squeeze and it is the same behavior as numpy
+        let output_shape = read_ranges
+            .iter()
+            .map(|range| (range.end - range.start) as usize)
+            .filter(|&size| size != 1)
+            .collect::<Vec<_>>();
 
         let flat_data = self
             .reader
             .read_simple(&read_ranges, None, None)
             .map_err(convert_omfilesrs_error)?;
 
-        let shape: Vec<usize> = read_ranges
-            .iter()
-            .map(|range| (range.end - range.start) as usize)
-            .collect();
-
-        let array = ArrayD::from_shape_vec(shape, flat_data)
+        let array = ArrayD::from_shape_vec(output_shape, flat_data)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
 
         Ok(array.into_pyarray(py))
