@@ -3,8 +3,8 @@ use std::ops::Range;
 
 /// A simplified numpy-like array basic indexing implementation.
 /// Compare https://numpy.org/doc/stable/user/basics.indexing.html.
-/// Supports integer, slice, and newaxis indexing.
-/// Currently does not support ellipsis, boolean, or integer array indexing.
+/// Supports integer, slice, newaxis and ellipsis indexing.
+/// Slice indexing is also currently limited to step size 1!
 #[derive(Debug)]
 pub enum IndexType {
     Int(i64),
