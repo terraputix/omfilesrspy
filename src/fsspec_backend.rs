@@ -217,8 +217,8 @@ mod tests {
             )?;
 
             // Create OmFileReader with the FsSpecBackend
-            let reader = OmFileReader2::new(Arc::new(backend), 256)
-                .map_err(|e| Box::new(e) as Box<dyn Error>)?;
+            let reader =
+                OmFileReader2::new(Arc::new(backend)).map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Read a small section of data
             let ranges = vec![
@@ -268,8 +268,8 @@ mod tests {
             )?;
 
             // Create OmFileReader with the FsSpecBackend
-            let reader = OmFileReader2::new(Arc::new(backend), 256)
-                .map_err(|e| Box::new(e) as Box<dyn Error>)?;
+            let reader =
+                OmFileReader2::new(Arc::new(backend)).map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Read a small section of data
             let ranges = vec![
