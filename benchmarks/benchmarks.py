@@ -1,12 +1,16 @@
-import numpy as np
-import h5py
-import zarr
 import time
-import netCDF4 as nc
-import omfilesrspy as om
 
 # from numcodecs import Blosc
 from functools import wraps
+from typing import Any, Callable
+
+import h5py
+import netCDF4 as nc
+import numpy as np
+import xarray as xr
+import zarr
+
+import omfilesrspy as om
 
 # Create a large NumPy array
 array_size = (10, 10, 1, 10, 10, 10)
@@ -23,10 +27,11 @@ print("Data shape:", data.shape)
 print("Data type:", data.dtype)
 print("Chunk size:", chunk_size)
 
+
 # Decorator to measure execution time
-def measure_time(func):
+def measure_time(func: Callable) -> Callable:
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: tuple, **kwargs: dict) -> tuple[Any, float, float]:
         start_time = time.time()
         cpu_start_time = time.process_time()
         result = func(*args, **kwargs)
@@ -38,7 +43,7 @@ def measure_time(func):
 
 
 @measure_time
-def write_hdf5(data, chunk_size):
+def write_hdf5(data: np.typing.NDArray, chunk_size: tuple):
     with h5py.File("data.h5", "w") as f:
         f.create_dataset(
             "dataset",
@@ -56,7 +61,7 @@ def read_hdf5():
 
 
 @measure_time
-def write_zarr(data, chunk_size):
+def write_zarr(data: np.typing.NDArray, chunk_size: tuple):
     # compressor = Blosc(cname="lz4", clevel=5)
     # _z = zarr.array(
     #     data, chunks=chunk_size, compressor=compressor, chunk_store="data.zarr"
@@ -66,12 +71,12 @@ def write_zarr(data, chunk_size):
 
 @measure_time
 def read_zarr():
-    z = zarr.open("data.zarr", mode='r')
-    return z['arr_0'][0, 0, 0, 0, ...]
+    z = zarr.open("data.zarr", mode="r")
+    return z["arr_0"][0, 0, 0, 0, ...]
 
 
 @measure_time
-def write_netcdf(data, chunk_size):
+def write_netcdf(data: np.typing.NDArray, chunk_size: tuple):
     with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
         dimension_names = ()
         for dim in range(data.ndim):
@@ -96,7 +101,7 @@ def read_netcdf():
 
 
 @measure_time
-def write_om(data, chunk_size):
+def write_om(data: np.typing.NDArray, chunk_size: tuple):
     writer = om.OmFilePyWriter("data.om")
     writer.write_array(
         data,
@@ -106,10 +111,16 @@ def write_om(data, chunk_size):
     )
 
 
+# @measure_time
+# def read_om():
+#     reader = om.OmFilePyReader("data.om")
+#     return reader[0, 0, 0, 0, ...]
+
+
 @measure_time
 def read_om():
-    reader = om.OmFilePyReader("data.om")
-    return reader[0, 0, 0, 0, ...]
+    ds = xr.open_dataset("data.om", engine=om.xarray_backend.OmXarrayEntrypoint)
+    return ds["dataset"][0, 0, 0, 0, ...].values
 
 
 # Measure times
@@ -123,9 +134,7 @@ formats = {
 
 for fmt, (write_func, read_func) in formats.items():
     results[fmt] = {}
-    _, results[fmt]["write_time"], results[fmt]["cpu_write_time"] = write_func(
-        data, chunk_size
-    )
+    _, results[fmt]["write_time"], results[fmt]["cpu_write_time"] = write_func(data, chunk_size)
     read_data, results[fmt]["read_time"], results[fmt]["cpu_read_time"] = read_func()
 
     if read_data.shape == array_size:
@@ -137,9 +146,5 @@ for fmt, (write_func, read_func) in formats.items():
 
 # Print results
 for fmt, times in results.items():
-    print(
-        f"{fmt} write time: {times['write_time']:.4f} seconds (CPU: {times['cpu_write_time']:.4f} seconds)"
-    )
-    print(
-        f"{fmt} read time: {times['read_time']:.4f} seconds (CPU: {times['cpu_read_time']:.4f} seconds)"
-    )
+    print(f"{fmt} write time: {times['write_time']:.4f} seconds (CPU: {times['cpu_write_time']:.4f} seconds)")
+    print(f"{fmt} read time: {times['read_time']:.4f} seconds (CPU: {times['cpu_read_time']:.4f} seconds)")

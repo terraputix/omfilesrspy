@@ -6,6 +6,7 @@ use pyo3::prelude::*;
 #[pyclass]
 pub struct OmFilePyReader {
     reader: OmFileReader2<MmapFile>,
+    #[pyo3(get)]
     shape: Vec<u64>,
 }
 

@@ -1,6 +1,7 @@
 import numpy as np
-import pytest
+
 import omfilesrspy
+
 
 def test_write_om_file():
     # Create test data
@@ -9,12 +10,8 @@ def test_write_om_file():
     file_writer = omfilesrspy.OmFilePyWriter(temp_file)
 
     # Write data
-    file_writer.write_array(
-        test_data,
-        chunks=[5,5],
-        scale_factor=1.0,
-        add_offset=0.0
-    )
+    file_writer.write_array(test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0)
+
 
 # def test_read_om_file():
 #     # To run this test you need to execute cargo test --no-default-features once to create the test data...
