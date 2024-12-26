@@ -300,7 +300,7 @@ dependencies = [
 [[package]]
 name = "omfileformatc-rs"
 version = "0.0.1"
-source = "git+https://github.com/terraputix/omfileformatc-rs?branch=swift-and-c-fixes#fb81105c8dbb8c30f32fec047462a47bf02629cd"
+source = "git+https://github.com/terraputix/omfileformatc-rs?branch=main#ef757286051c08004e167dd30ff458c27ad117a9"
 dependencies = [
  "bindgen",
  "cc",
@@ -310,7 +310,7 @@ dependencies = [
 [[package]]
 name = "omfiles-rs"
 version = "0.1.0"
-source = "git+https://github.com/terraputix/omfiles-rs?branch=multidim-file-format#30aa78c013b29480c597fe55b214f7418cfd2f62"
+source = "git+https://github.com/terraputix/omfiles-rs?branch=multidim-file-format#6baf0429c1378427fb7a8f6141d507a46979f361"
 dependencies = [
  "memmap2",
  "omfileformatc-rs",

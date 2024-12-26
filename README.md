@@ -3,11 +3,12 @@
 ## Development
 
 ```bash
-# setup python virtual environment
-python3 -m venv env
-source env/bin/activate
-
+# setup python virtual environment with pyenv
+pyenv virtualenv pyo3
+pyenv activate pyo3
+# To always activate this environment in this directory run `pyenv local pyo3`
 pip install maturin
+
 maturin develop --extras=dev
 # if you encounter an error:  Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
 unset CONDA_PREFIX

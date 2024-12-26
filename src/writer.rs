@@ -40,7 +40,6 @@ impl OmFilePyWriter {
                 CompressionType::P4nzdec256,
                 scale_factor,
                 add_offset,
-                256,
             )
             .map_err(convert_omfilesrs_error)?;
 
