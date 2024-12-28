@@ -1,12 +1,20 @@
-import numpy as np
-import h5py
-import zarr
 import time
-import netCDF4 as nc
-import omfilesrspy as om
 
 # from numcodecs import Blosc
 from functools import wraps
+
+import h5py
+import netCDF4 as nc
+import numpy as np
+import zarr
+
+import omfilesrspy as om
+
+# filenames
+h5_filename = "data.h5"
+zarr_filename = "data.zarr"
+nc_filename = "data.nc"
+om_filename = "data.om"
 
 # Create a large NumPy array
 array_size = (10, 10, 1, 10, 10, 10)
@@ -23,6 +31,7 @@ print("Data shape:", data.shape)
 print("Data type:", data.dtype)
 print("Chunk size:", chunk_size)
 
+
 # Decorator to measure execution time
 def measure_time(func):
     @wraps(func)
@@ -38,8 +47,8 @@ def measure_time(func):
 
 
 @measure_time
-def write_hdf5(data, chunk_size):
-    with h5py.File("data.h5", "w") as f:
+def write_hdf5(data: np.typing.NDArray, chunk_size: tuple):
+    with h5py.File(h5_filename, "w") as f:
         f.create_dataset(
             "dataset",
             data=data,
@@ -51,7 +60,7 @@ def write_hdf5(data, chunk_size):
 
 @measure_time
 def read_hdf5():
-    with h5py.File("data.h5", "r") as f:
+    with h5py.File(h5_filename, "r") as f:
         return f["dataset"][0, 0, 0, 0, ...]
 
 
@@ -61,18 +70,18 @@ def write_zarr(data, chunk_size):
     # _z = zarr.array(
     #     data, chunks=chunk_size, compressor=compressor, chunk_store="data.zarr"
     # )
-    zarr.save("data.zarr", data, chunks=chunk_size)
+    zarr.save(zarr_filename, data, chunks=chunk_size)
 
 
 @measure_time
 def read_zarr():
-    z = zarr.open("data.zarr", mode='r')
-    return z['arr_0'][0, 0, 0, 0, ...]
+    z = zarr.open(zarr_filename, mode="r")
+    return z["arr_0"][0, 0, 0, 0, ...]
 
 
 @measure_time
-def write_netcdf(data, chunk_size):
-    with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
+def write_netcdf(data: np.typing.NDArray, chunk_size: tuple):
+    with nc.Dataset(nc_filename, "w", format="NETCDF4") as ds:
         dimension_names = ()
         for dim in range(data.ndim):
             ds.createDimension(f"dim{dim}", data.shape[dim])
@@ -91,13 +100,13 @@ def write_netcdf(data, chunk_size):
 
 @measure_time
 def read_netcdf():
-    with nc.Dataset("data.nc", "r") as ds:
+    with nc.Dataset(nc_filename, "r") as ds:
         return ds.variables["dataset"][0, 0, 0, 0, ...]
 
 
 @measure_time
-def write_om(data, chunk_size):
-    writer = om.OmFilePyWriter("data.om")
+def write_om(data: np.typing.NDArray, chunk_size: tuple):
+    writer = om.OmFilePyWriter(om_filename)
     writer.write_array(
         data,
         chunk_size,
@@ -108,9 +117,14 @@ def write_om(data, chunk_size):
 
 @measure_time
 def read_om():
-    reader = om.OmFilePyReader("data.om")
+    reader = om.OmFilePyReader(om_filename)
     return reader[0, 0, 0, 0, ...]
 
+
+# @measure_time
+# def read_om():
+#     ds = xr.open_dataset(om_filename, engine=om.xarray_backend.OmXarrayEntrypoint)
+#     return ds["dataset"][0, 0, 0, 0, ...].values
 
 # Measure times
 results = {}
