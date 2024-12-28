@@ -1,6 +1,7 @@
 import numpy as np
-import pytest
+
 import omfilesrspy
+
 
 def test_write_om_file():
     # Create test data
@@ -9,12 +10,8 @@ def test_write_om_file():
     file_writer = omfilesrspy.OmFilePyWriter(temp_file)
 
     # Write data
-    file_writer.write_array(
-        test_data,
-        chunks=[5,5],
-        scale_factor=1.0,
-        add_offset=0.0
-    )
+    file_writer.write_array(test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0)
+
 
 # def test_read_om_file():
 #     # To run this test you need to execute cargo test --no-default-features once to create the test data...
@@ -26,10 +23,13 @@ def test_write_om_file():
 #     # Check data
 #     assert data.shape == (5, 5)
 #     assert data.dtype == np.float32
-#     np.testing.assert_array_equal(data, [
-#         [0.0, 1.0, 2.0, 3.0, 4.0],
-#         [5.0, 6.0, 7.0, 8.0, 9.0],
-#         [10.0, 11.0, 12.0, 13.0, 14.0],
-#         [15.0, 16.0, 17.0, 18.0, 19.0],
-#         [20.0, 21.0, 22.0, 23.0, 24.0],
-#     ])
+#     np.testing.assert_array_equal(
+#         data,
+#         [
+#             [0.0, 1.0, 2.0, 3.0, 4.0],
+#             [5.0, 6.0, 7.0, 8.0, 9.0],
+#             [10.0, 11.0, 12.0, 13.0, 14.0],
+#             [15.0, 16.0, 17.0, 18.0, 19.0],
+#             [20.0, 21.0, 22.0, 23.0, 24.0],
+#         ],
+#     )
