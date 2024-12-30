@@ -12,6 +12,12 @@ import zarr
 
 import omfilesrspy as om
 
+# filenames
+h5_filename = "data.h5"
+zarr_filename = "data.zarr"
+nc_filename = "data.nc"
+om_filename = "data.om"
+
 # Create a large NumPy array
 array_size = (10, 10, 1, 10, 10, 10)
 # Generate a sinusoidal curve with noise
@@ -44,7 +50,7 @@ def measure_time(func: Callable) -> Callable:
 
 @measure_time
 def write_hdf5(data: np.typing.NDArray, chunk_size: tuple):
-    with h5py.File("data.h5", "w") as f:
+    with h5py.File(h5_filename, "w") as f:
         f.create_dataset(
             "dataset",
             data=data,
@@ -56,7 +62,7 @@ def write_hdf5(data: np.typing.NDArray, chunk_size: tuple):
 
 @measure_time
 def read_hdf5():
-    with h5py.File("data.h5", "r") as f:
+    with h5py.File(h5_filename, "r") as f:
         return f["dataset"][0, 0, 0, 0, ...]
 
 
@@ -66,18 +72,18 @@ def write_zarr(data: np.typing.NDArray, chunk_size: tuple):
     # _z = zarr.array(
     #     data, chunks=chunk_size, compressor=compressor, chunk_store="data.zarr"
     # )
-    zarr.save("data.zarr", data, chunks=chunk_size)
+    zarr.save(zarr_filename, data, chunks=chunk_size)
 
 
 @measure_time
 def read_zarr():
-    z = zarr.open("data.zarr", mode="r")
+    z = zarr.open(zarr_filename, mode="r")
     return z["arr_0"][0, 0, 0, 0, ...]
 
 
 @measure_time
 def write_netcdf(data: np.typing.NDArray, chunk_size: tuple):
-    with nc.Dataset("data.nc", "w", format="NETCDF4") as ds:
+    with nc.Dataset(nc_filename, "w", format="NETCDF4") as ds:
         dimension_names = ()
         for dim in range(data.ndim):
             ds.createDimension(f"dim{dim}", data.shape[dim])
@@ -96,13 +102,13 @@ def write_netcdf(data: np.typing.NDArray, chunk_size: tuple):
 
 @measure_time
 def read_netcdf():
-    with nc.Dataset("data.nc", "r") as ds:
+    with nc.Dataset(nc_filename, "r") as ds:
         return ds.variables["dataset"][0, 0, 0, 0, ...]
 
 
 @measure_time
 def write_om(data: np.typing.NDArray, chunk_size: tuple):
-    writer = om.OmFilePyWriter("data.om")
+    writer = om.OmFilePyWriter(om_filename)
     writer.write_array(
         data,
         chunk_size,
@@ -119,9 +125,14 @@ def write_om(data: np.typing.NDArray, chunk_size: tuple):
 
 @measure_time
 def read_om():
-    ds = xr.open_dataset("data.om", engine=om.xarray_backend.OmXarrayEntrypoint)
+    ds = xr.open_dataset(om_filename, engine=om.xarray_backend.OmXarrayEntrypoint)
     return ds["dataset"][0, 0, 0, 0, ...].values
 
+
+# @measure_time
+# def read_om():
+#     ds = xr.open_dataset(om_filename, engine=om.xarray_backend.OmXarrayEntrypoint)
+#     return ds["dataset"][0, 0, 0, 0, ...].values
 
 # Measure times
 results = {}

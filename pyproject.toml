@@ -14,7 +14,8 @@ dynamic = ["version"]
 dependencies = ["numpy>=1.20.0", "xarray>=0.19.0"]
 
 [tool.maturin]
-bindings = "pyo3" # pyo3 bindings is actually the default for maturin
+python-source = "python" # Python source code is in the `python` directory
+bindings = "pyo3"        # pyo3 bindings is actually the default for maturin
 # features = ["pyo3/extension-module"]
 
 [project.optional-dependencies]

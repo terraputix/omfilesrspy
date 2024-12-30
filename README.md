@@ -4,8 +4,8 @@
 
 ```bash
 # setup python virtual environment with pyenv
-pyenv virtualenv pyo3
-pyenv activate pyo3
+python -m venv .venv
+source .venv/bin/activate
 # To always activate this environment in this directory run `pyenv local pyo3`
 pip install maturin
 
