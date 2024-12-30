@@ -128,12 +128,6 @@ def read_om():
     ds = xr.open_dataset(om_filename, engine=om.xarray_backend.OmXarrayEntrypoint)
     return ds["dataset"][0, 0, 0, 0, ...].values
 
-
-# @measure_time
-# def read_om():
-#     ds = xr.open_dataset(om_filename, engine=om.xarray_backend.OmXarrayEntrypoint)
-#     return ds["dataset"][0, 0, 0, 0, ...].values
-
 # Measure times
 results = {}
 formats = {
