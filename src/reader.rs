@@ -1,11 +1,11 @@
 use crate::{array_index::ArrayIndex, errors::convert_omfilesrs_error};
 use numpy::{ndarray::ArrayD, IntoPyArray, PyArrayDyn};
-use omfiles_rs::{backend::mmapfile::MmapFile, io::reader2::OmFileReader2};
+use omfiles_rs::{backend::mmapfile::MmapFile, io::reader::OmFileReader};
 use pyo3::prelude::*;
 
 #[pyclass]
 pub struct OmFilePyReader {
-    reader: OmFileReader2<MmapFile>,
+    reader: OmFileReader<MmapFile>,
     shape: Vec<u64>,
 }
 
@@ -16,7 +16,7 @@ unsafe impl Sync for OmFilePyReader {}
 impl OmFilePyReader {
     #[new]
     fn new(file_path: &str) -> PyResult<Self> {
-        let reader = OmFileReader2::from_file(file_path).map_err(convert_omfilesrs_error)?;
+        let reader = OmFileReader::from_file(file_path).map_err(convert_omfilesrs_error)?;
         let shape = reader.get_dimensions().to_vec();
 
         Ok(Self { reader, shape })
@@ -38,7 +38,7 @@ impl OmFilePyReader {
 
         let flat_data = self
             .reader
-            .read_simple(&read_ranges, None, None)
+            .read::<f32>(&read_ranges, None, None)
             .map_err(convert_omfilesrs_error)?;
 
         let array = ArrayD::from_shape_vec(output_shape, flat_data)
