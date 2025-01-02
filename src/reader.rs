@@ -1,11 +1,42 @@
-use std::sync::Arc;
-
 use crate::{
     array_index::ArrayIndex, errors::convert_omfilesrs_error, fsspec_backend::FsSpecBackend,
 };
 use numpy::{ndarray::ArrayD, IntoPyArray, PyArrayDyn};
-use omfiles_rs::{backend::mmapfile::MmapFile, io::reader::OmFileReader};
+use omfiles_rs::{
+    backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
+    io::reader::OmFileReader,
+};
 use pyo3::prelude::*;
+use std::sync::Arc;
+
+// Define a trait for common reader functionality
+trait OmFilePyReaderTrait {
+    fn get_reader(&self) -> &OmFileReader<impl OmFileReaderBackend>;
+    fn get_shape(&self) -> &Vec<u64>;
+
+    fn get_item<'py>(
+        &self,
+        py: Python<'py>,
+        ranges: ArrayIndex,
+    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
+        let read_ranges = ranges.to_read_range(self.get_shape())?;
+        let output_shape = read_ranges
+            .iter()
+            .map(|range| (range.end - range.start) as usize)
+            .filter(|&size| size != 1)
+            .collect::<Vec<_>>();
+
+        let flat_data = self
+            .get_reader()
+            .read::<f32>(&read_ranges, None, None)
+            .map_err(convert_omfilesrs_error)?;
+
+        let array = ArrayD::from_shape_vec(output_shape, flat_data)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
+        Ok(array.into_pyarray(py))
+    }
+}
 
 #[pyclass]
 pub struct OmFilePyReader {
@@ -30,24 +61,17 @@ impl OmFilePyReader {
         py: Python<'py>,
         ranges: ArrayIndex,
     ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
-        let read_ranges = ranges.to_read_range(&self.shape)?;
-        // We only add dimensions that are no singleton dimensions to the output shape
-        // This is basically a dimensional squeeze and it is the same behavior as numpy
-        let output_shape = read_ranges
-            .iter()
-            .map(|range| (range.end - range.start) as usize)
-            .filter(|&size| size != 1)
-            .collect::<Vec<_>>();
+        self.get_item(py, ranges)
+    }
+}
 
-        let flat_data = self
-            .reader
-            .read::<f32>(&read_ranges, None, None)
-            .map_err(convert_omfilesrs_error)?;
+impl OmFilePyReaderTrait for OmFilePyReader {
+    fn get_reader(&self) -> &OmFileReader<impl OmFileReaderBackend> {
+        &self.reader
+    }
 
-        let array = ArrayD::from_shape_vec(output_shape, flat_data)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
-
-        Ok(array.into_pyarray(py))
+    fn get_shape(&self) -> &Vec<u64> {
+        &self.shape
     }
 }
 
@@ -87,24 +111,17 @@ impl OmFilePyFsSpecReader {
         py: Python<'py>,
         ranges: ArrayIndex,
     ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
-        let read_ranges = ranges.to_read_range(&self.shape)?;
-        // We only add dimensions that are no singleton dimensions to the output shape
-        // This is basically a dimensional squeeze and it is the same behavior as numpy
-        let output_shape = read_ranges
-            .iter()
-            .map(|range| (range.end - range.start) as usize)
-            .filter(|&size| size != 1)
-            .collect::<Vec<_>>();
+        self.get_item(py, ranges)
+    }
+}
 
-        let flat_data = self
-            .reader
-            .read::<f32>(&read_ranges, None, None)
-            .map_err(convert_omfilesrs_error)?;
+impl OmFilePyReaderTrait for OmFilePyFsSpecReader {
+    fn get_reader(&self) -> &OmFileReader<impl OmFileReaderBackend> {
+        &self.reader
+    }
 
-        let array = ArrayD::from_shape_vec(output_shape, flat_data)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
-
-        Ok(array.into_pyarray(py))
+    fn get_shape(&self) -> &Vec<u64> {
+        &self.shape
     }
 }
 
