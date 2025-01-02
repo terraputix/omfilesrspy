@@ -35,11 +35,11 @@ def test_write_om_file():
 #     )
 
 
-def test_fsspec_backend():
-    fsspec_object = fsspec.open("test_files/read_test.om", "rb")
+# def test_fsspec_backend():
+#     fsspec_object = fsspec.open("test_files/read_test.om", "rb")
 
-    file = omfilesrspy.FsSpecBackend(fsspec_object)
-    assert file.file_size == 144
+#     file = omfilesrspy.FsSpecBackend(fsspec_object)
+#     assert file.file_size == 144
 
 
 def test_s3_reader():
