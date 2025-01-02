@@ -145,7 +145,7 @@ impl OmFileReaderBackend for FsSpecBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use omfiles_rs::io::reader2::OmFileReader2;
+    use omfiles_rs::io::reader::OmFileReader;
     use std::{error::Error, ops::Range, sync::Arc};
 
     #[test]
@@ -218,7 +218,7 @@ mod tests {
 
             // Create OmFileReader with the FsSpecBackend
             let reader =
-                OmFileReader2::new(Arc::new(backend)).map_err(|e| Box::new(e) as Box<dyn Error>)?;
+                OmFileReader::new(Arc::new(backend)).map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Read a small section of data
             let ranges = vec![
@@ -230,7 +230,7 @@ mod tests {
             ];
 
             let data = reader
-                .read_simple(&ranges, None, None)
+                .read::<f32>(&ranges, None, None)
                 .map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Verify we got some data
@@ -269,7 +269,7 @@ mod tests {
 
             // Create OmFileReader with the FsSpecBackend
             let reader =
-                OmFileReader2::new(Arc::new(backend)).map_err(|e| Box::new(e) as Box<dyn Error>)?;
+                OmFileReader::new(Arc::new(backend)).map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Read a small section of data
             let ranges = vec![
@@ -281,7 +281,7 @@ mod tests {
             ];
 
             let data = reader
-                .read_simple(&ranges, None, None)
+                .read::<f32>(&ranges, None, None)
                 .map_err(|e| Box::new(e) as Box<dyn Error>)?;
 
             // Verify we got some data

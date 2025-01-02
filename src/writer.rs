@@ -1,5 +1,5 @@
 use numpy::PyReadonlyArrayDyn;
-use omfiles_rs::{core::compression::CompressionType, io::writer2::OmFileWriter2};
+use omfiles_rs::{core::compression::CompressionType, io::writer::OmFileWriter};
 use pyo3::prelude::*;
 use std::fs::File;
 
@@ -7,7 +7,7 @@ use crate::errors::convert_omfilesrs_error;
 
 #[pyclass]
 pub struct OmFilePyWriter {
-    file_writer: OmFileWriter2<File>,
+    file_writer: OmFileWriter<File>,
 }
 
 #[pymethods]
@@ -15,7 +15,7 @@ impl OmFilePyWriter {
     #[new]
     fn new(file_path: &str) -> PyResult<Self> {
         let file_handle = File::create(file_path)?;
-        let writer = OmFileWriter2::new(file_handle, 8 * 1024); // initial capacity of 8KB
+        let writer = OmFileWriter::new(file_handle, 8 * 1024); // initial capacity of 8KB
         Ok(Self {
             file_writer: writer,
         })
