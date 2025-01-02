@@ -85,3 +85,19 @@ class OmFilePyReader:
             PyValueError: If the requested ranges are invalid or if there's an error reading the data
         """
         ...
+
+class FsSpecBackend:
+    """Support for reading .om files using fsspec."""
+
+    def __init__(self, file_path: str, protocol: str = "file") -> None:
+        """
+        Initialize an FsSpecBackend object.
+
+        Args:
+            file_path: Path to the .om file
+            protocol: Protocol to use for fsspec (default: "file")
+
+        Raises:
+            PyValueError: If the file cannot be opened or is invalid
+        """
+        ...
