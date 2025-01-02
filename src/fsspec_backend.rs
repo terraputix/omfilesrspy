@@ -17,8 +17,7 @@ impl FsSpecBackend {
         let size = Python::with_gil(|py| -> PyResult<u64> {
             let fs = open_file.bind(py).getattr("fs")?;
             let path = open_file.bind(py).getattr("path")?;
-            let info = fs.call_method1("info", (path,))?;
-            let size = info.get_item("size")?.extract::<u64>()?;
+            let size = fs.call_method1("size", (path,))?.extract::<u64>()?;
             Ok(size)
         })?;
 
@@ -74,20 +73,23 @@ impl OmFileReaderBackend for FsSpecBackend {
 
 #[cfg(test)]
 mod tests {
+    use crate::create_test_binary_file;
+
     use super::*;
     use std::error::Error;
 
     #[test]
     fn test_fsspec_backend() -> Result<(), Box<dyn Error>> {
+        let file_name = "test_fsspec_backend.om";
+        let file_path = format!("test_files/{}", file_name);
+        create_test_binary_file!(file_name)?;
         pyo3::prepare_freethreaded_python();
 
         Python::with_gil(|py| -> Result<(), Box<dyn Error>> {
             let fsspec = py.import("fsspec")?;
             let fs = fsspec.call_method1("filesystem", ("file",))?;
-            let file_path = "test_files/read_test.om";
             let open_file = fs.call_method1("open", (file_path,))?;
 
-            // Create FsSpecBackend
             let backend = FsSpecBackend::new(open_file.into())?;
             assert_eq!(backend.file_size, 144);
 
