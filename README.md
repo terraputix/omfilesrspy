@@ -23,9 +23,24 @@ cargo test --no-default-features
 ## Usage
 
 ```python
-import omfilesrspy
+from omfilesrspy import OmFilePyReader
 
-omfilesrspy.read_om_file("test_file.om")
+reader = OmFilePyReader("test_file.om")
+data = reader[0:2, 0:100, ...]
+```
+
+## Benchmarks
+
+Before running the benchmarks, make sure to compile the release version of the library:
+
+```bash
+maturin develop --release
+```
+
+Then run the benchmarks:
+
+```bash
+python benchmarks/benchmarks.py
 ```
 
 ## Benchmarks

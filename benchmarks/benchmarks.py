@@ -139,7 +139,9 @@ formats = {
 
 for fmt, (write_func, read_func) in formats.items():
     results[fmt] = {}
-    _, results[fmt]["write_time"], results[fmt]["cpu_write_time"] = write_func(data, chunk_size)
+    _, results[fmt]["write_time"], results[fmt]["cpu_write_time"] = write_func(
+        data, chunk_size
+    )
     read_data, results[fmt]["read_time"], results[fmt]["cpu_read_time"] = read_func()
 
     if read_data.shape == array_size:
@@ -151,5 +153,9 @@ for fmt, (write_func, read_func) in formats.items():
 
 # Print results
 for fmt, times in results.items():
-    print(f"{fmt} write time: {times['write_time']:.4f} seconds (CPU: {times['cpu_write_time']:.4f} seconds)")
-    print(f"{fmt} read time: {times['read_time']:.4f} seconds (CPU: {times['cpu_read_time']:.4f} seconds)")
+    print(
+        f"{fmt} write time: {times['write_time']:.4f} seconds (CPU: {times['cpu_write_time']:.4f} seconds)"
+    )
+    print(
+        f"{fmt} read time: {times['read_time']:.4f} seconds (CPU: {times['cpu_read_time']:.4f} seconds)"
+    )

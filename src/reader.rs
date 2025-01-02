@@ -1,15 +1,50 @@
-use crate::{array_index::ArrayIndex, errors::convert_omfilesrs_error};
+use crate::{
+    array_index::ArrayIndex, errors::convert_omfilesrs_error, fsspec_backend::FsSpecBackend,
+};
 use numpy::{ndarray::ArrayD, IntoPyArray, PyArrayDyn};
-use omfiles_rs::{backend::mmapfile::MmapFile, io::reader2::OmFileReader2};
+use omfiles_rs::{
+    backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
+    io::reader::OmFileReader,
+};
 use pyo3::prelude::*;
+use std::sync::Arc;
+
+// Reader trait for common functionality
+trait OmFilePyReaderTrait {
+    fn get_reader(&self) -> &OmFileReader<impl OmFileReaderBackend>;
+    fn get_shape(&self) -> &Vec<u64>;
+
+    fn get_item<'py>(
+        &self,
+        py: Python<'py>,
+        ranges: ArrayIndex,
+    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
+        let read_ranges = ranges.to_read_range(self.get_shape())?;
+        // We only add dimensions that are no singleton dimensions to the output shape
+        // This is basically a dimensional squeeze and it is the same behavior as numpy
+        let output_shape = read_ranges
+            .iter()
+            .map(|range| (range.end - range.start) as usize)
+            .filter(|&size| size != 1)
+            .collect::<Vec<_>>();
+
+        let flat_data = self
+            .get_reader()
+            .read::<f32>(&read_ranges, None, None)
+            .map_err(convert_omfilesrs_error)?;
+
+        let array = ArrayD::from_shape_vec(output_shape, flat_data)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+
+        Ok(array.into_pyarray(py))
+    }
+}
 
 #[pyclass]
 pub struct OmFilePyReader {
-    reader: OmFileReader2<MmapFile>,
-    #[pyo3(get)]
+    reader: OmFileReader<MmapFile>,
     shape: Vec<u64>,
 }
-
 unsafe impl Send for OmFilePyReader {}
 unsafe impl Sync for OmFilePyReader {}
 
@@ -17,7 +52,7 @@ unsafe impl Sync for OmFilePyReader {}
 impl OmFilePyReader {
     #[new]
     fn new(file_path: &str) -> PyResult<Self> {
-        let reader = OmFileReader2::from_file(file_path).map_err(convert_omfilesrs_error)?;
+        let reader = OmFileReader::from_file(file_path).map_err(convert_omfilesrs_error)?;
         let shape = reader.get_dimensions().to_vec();
 
         Ok(Self { reader, shape })
@@ -28,50 +63,81 @@ impl OmFilePyReader {
         py: Python<'py>,
         ranges: ArrayIndex,
     ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
-        let read_ranges = ranges.to_read_range(&self.shape)?;
-        // We only add dimensions that are no singleton dimensions to the output shape
-        // This is basically a dimensional squeeze and it is the same behavior as numpy
-        let output_shape = read_ranges
-            .iter()
-            .map(|range| (range.end - range.start) as usize)
-            .filter(|&size| size != 1)
-            .collect::<Vec<_>>();
+        self.get_item(py, ranges)
+    }
+}
 
-        let flat_data = self
-            .reader
-            .read_simple(&read_ranges, None, None)
-            .map_err(convert_omfilesrs_error)?;
+impl OmFilePyReaderTrait for OmFilePyReader {
+    fn get_reader(&self) -> &OmFileReader<impl OmFileReaderBackend> {
+        &self.reader
+    }
 
-        let array = ArrayD::from_shape_vec(output_shape, flat_data)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+    fn get_shape(&self) -> &Vec<u64> {
+        &self.shape
+    }
+}
 
-        Ok(array.into_pyarray(py))
+#[pyclass]
+pub struct OmFilePyFsSpecReader {
+    reader: OmFileReader<FsSpecBackend>,
+    shape: Vec<u64>,
+}
+unsafe impl Send for OmFilePyFsSpecReader {}
+unsafe impl Sync for OmFilePyFsSpecReader {}
+
+#[pymethods]
+impl OmFilePyFsSpecReader {
+    #[new]
+    fn new(file_obj: PyObject) -> PyResult<Self> {
+        Python::with_gil(|py| -> PyResult<Self> {
+            let bound_object = file_obj.bind(py);
+
+            if !bound_object.hasattr("read")?
+                || !bound_object.hasattr("seek")?
+                || !bound_object.hasattr("fs")?
+            {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                    "Input must be a valid fsspec file object with read, seek methods and fs attribute",
+                ));
+            }
+
+            let backend = FsSpecBackend::new(file_obj)?;
+            let reader = OmFileReader::new(Arc::new(backend)).map_err(convert_omfilesrs_error)?;
+            let shape = reader.get_dimensions().to_vec();
+            Ok(Self { reader, shape })
+        })
+    }
+
+    fn __getitem__<'py>(
+        &self,
+        py: Python<'py>,
+        ranges: ArrayIndex,
+    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
+        self.get_item(py, ranges)
+    }
+}
+
+impl OmFilePyReaderTrait for OmFilePyFsSpecReader {
+    fn get_reader(&self) -> &OmFileReader<impl OmFileReaderBackend> {
+        &self.reader
+    }
+
+    fn get_shape(&self) -> &Vec<u64> {
+        &self.shape
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{array_index::IndexType, test_utils::create_binary_file};
+    use crate::array_index::IndexType;
+    use crate::create_test_binary_file;
     use numpy::PyArrayMethods;
 
     #[test]
     fn test_read_simple_v3_data() -> Result<(), Box<dyn std::error::Error>> {
-        create_binary_file(
-            "read_test.om",
-            &[
-                79, 77, 3, 0, 4, 130, 0, 2, 3, 34, 0, 4, 194, 2, 10, 4, 178, 0, 12, 4, 242, 0, 14,
-                197, 17, 20, 194, 2, 22, 194, 2, 24, 3, 3, 228, 200, 109, 1, 0, 0, 20, 0, 4, 0, 0,
-                0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 128, 63, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
-                0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 100, 97, 116, 97, 0, 0, 0, 0, 79, 77, 3, 0,
-                0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 0,
-            ],
-        )?;
-
+        create_test_binary_file!("read_test.om")?;
         let file_path = "test_files/read_test.om";
-
-        // Initialize Python
         pyo3::prepare_freethreaded_python();
 
         Python::with_gil(|py| {
