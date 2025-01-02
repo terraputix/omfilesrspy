@@ -3,16 +3,12 @@ use pyo3::prelude::*;
 use pyo3::Python;
 use std::error::Error;
 
-#[pyclass]
 pub struct FsSpecBackend {
     py_file: PyObject,
-    #[pyo3(get)]
     file_size: u64,
 }
 
-#[pymethods]
 impl FsSpecBackend {
-    #[new]
     pub fn new(open_file: PyObject) -> PyResult<Self> {
         let size = Python::with_gil(|py| -> PyResult<u64> {
             let fs = open_file.bind(py).getattr("fs")?;

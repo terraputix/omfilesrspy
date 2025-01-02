@@ -118,28 +118,3 @@ class OmFilePyFsSpecReader:
             PyValueError: If the requested ranges are invalid or if there's an error reading the data
         """
         ...
-
-class FsSpecBackend:
-    """
-    A backend interface for fsspec file objects that provides access to file metadata.
-
-    This class wraps a fsspec file object and provides access to its size and filesystem.
-    """
-
-    def __init__(self, open_file: object) -> None:
-        """
-        Initialize a FsSpecBackend.
-
-        Args:
-            open_file: A fsspec file object that has fs and path attributes
-
-        Raises:
-            TypeError: If open_file is not a valid fsspec file object
-            PyValueError: If unable to get file info from filesystem
-        """
-        ...
-
-    @property
-    def file_size(self) -> int:
-        """The size of the file in bytes."""
-        ...
