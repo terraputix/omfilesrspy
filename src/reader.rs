@@ -9,7 +9,7 @@ use omfiles_rs::{
 use pyo3::prelude::*;
 use std::sync::Arc;
 
-// Define a trait for common reader functionality
+// Reader trait for common functionality
 trait OmFilePyReaderTrait {
     fn get_reader(&self) -> &OmFileReader<impl OmFileReaderBackend>;
     fn get_shape(&self) -> &Vec<u64>;
@@ -20,6 +20,8 @@ trait OmFilePyReaderTrait {
         ranges: ArrayIndex,
     ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
         let read_ranges = ranges.to_read_range(self.get_shape())?;
+        // We only add dimensions that are no singleton dimensions to the output shape
+        // This is basically a dimensional squeeze and it is the same behavior as numpy
         let output_shape = read_ranges
             .iter()
             .map(|range| (range.end - range.start) as usize)
@@ -136,8 +138,6 @@ mod tests {
     fn test_read_simple_v3_data() -> Result<(), Box<dyn std::error::Error>> {
         create_test_binary_file!("read_test.om")?;
         let file_path = "test_files/read_test.om";
-
-        // Initialize Python
         pyo3::prepare_freethreaded_python();
 
         Python::with_gil(|py| {
