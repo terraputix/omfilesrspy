@@ -70,7 +70,6 @@ mod tests {
 
     #[test]
     fn test_write_array() -> Result<(), Box<dyn std::error::Error>> {
-        // Initialize Python
         pyo3::prepare_freethreaded_python();
 
         Python::with_gil(|py| {
