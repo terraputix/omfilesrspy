@@ -86,18 +86,60 @@ class OmFilePyReader:
         """
         ...
 
-class FsSpecBackend:
-    """Support for reading .om files using fsspec."""
+class OmFilePyFsSpecReader:
+    """A Python wrapper for the Rust OmFileFsSpecReader implementation."""
 
-    def __init__(self, file_path: str, protocol: str = "file") -> None:
+    def __init__(self, file_obj: object) -> None:
         """
-        Initialize an FsSpecBackend object.
+        Initialize an OmFilePyFsSpecReader.
 
         Args:
-            file_path: Path to the .om file
-            protocol: Protocol to use for fsspec (default: "file")
+            file_obj: A fsspec file object with read, seek methods and fs attribute
 
         Raises:
+            TypeError: If the provided file_obj is not a valid fsspec file object
             PyValueError: If the file cannot be opened or is invalid
         """
+        ...
+
+    def __getitem__(self, ranges: BasicIndexType) -> npt.NDArray[np.float32]:
+        """
+        Read data from the .om file using numpy-style indexing.
+        Currently only slices with step 1 are supported.
+
+        Args:
+            ranges: Index expression that can be either a single slice/integer
+                   or a tuple of slices/integers for multi-dimensional access
+
+        Returns:
+            NDArray containing the requested data with squeezed singleton dimensions
+
+        Raises:
+            PyValueError: If the requested ranges are invalid or if there's an error reading the data
+        """
+        ...
+
+class FsSpecBackend:
+    """
+    A backend interface for fsspec file objects that provides access to file metadata.
+
+    This class wraps a fsspec file object and provides access to its size and filesystem.
+    """
+
+    def __init__(self, open_file: object) -> None:
+        """
+        Initialize a FsSpecBackend.
+
+        Args:
+            open_file: A fsspec file object that has fs and path attributes
+
+        Raises:
+            TypeError: If open_file is not a valid fsspec file object
+            PyValueError: If unable to get file info from filesystem
+        """
+        ...
+
+    @property
+    def file_size(self) -> int:
+        """The size of the file in bytes."""
         ...
