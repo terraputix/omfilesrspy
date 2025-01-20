@@ -18,7 +18,7 @@ class OmFilePyWriter:
         """
         ...
 
-    def write_array(
+    def write_array_f32(
         self,
         data: npt.NDArray[np.float32],
         chunks: list[int] | tuple[int, ...],

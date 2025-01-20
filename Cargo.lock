@@ -298,9 +298,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "omfileformatc-rs"
-version = "0.0.1"
-source = "git+https://github.com/terraputix/omfileformatc-rs?branch=main#502c46e07e5f831d863e4686a8d3577e4c46a046"
+name = "om-file-format-sys"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76ebb0f1c6d2b950f4b6224acbd11088b2db36e55a7d1c59a508bb34dd3a9210"
 dependencies = [
  "bindgen",
  "cc",
@@ -310,10 +311,10 @@ dependencies = [
 [[package]]
 name = "omfiles-rs"
 version = "0.1.0"
-source = "git+https://github.com/terraputix/omfiles-rs?branch=main#0470ca5b31b25523ff5e013f2845570a32ead491"
+source = "git+https://github.com/terraputix/omfiles-rs?branch=main#815b22954ee1f07cf20b97146c3665163029feef"
 dependencies = [
  "memmap2",
- "omfileformatc-rs",
+ "om-file-format-sys",
  "serde",
  "serde_json",
 ]
