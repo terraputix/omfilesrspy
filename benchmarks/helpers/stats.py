@@ -2,8 +2,11 @@ import os
 import statistics
 import time
 from functools import wraps
+from typing import Any, Callable, Tuple, TypeVar
 
 import psutil
+
+T = TypeVar("T")
 
 
 def get_memory_usage():
@@ -24,9 +27,9 @@ def measure_memory(func):
 
 
 # Decorator to measure execution time
-def measure_time(func):
+def measure_time(func: Callable[..., T]) -> Callable[..., Tuple[T, float, float]]:
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Tuple[T, float, float]:
         start_time = time.time()
         cpu_start_time = time.process_time()
         result = func(*args, **kwargs)

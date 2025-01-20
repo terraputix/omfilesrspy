@@ -30,16 +30,24 @@ class HDF5Format(BaseFormat):
 
     def read(self, index: BasicIndexType) -> np.ndarray:
         with h5py.File(self.filename, "r") as f:
-            return f["dataset"][index]
+            dataset = f["dataset"]
+            if not isinstance(dataset, h5py.Dataset):
+                raise TypeError("Expected a h5py Dataset")
+            return dataset[index]
 
 
 class ZarrFormat(BaseFormat):
     def write(self, data: np.ndarray, chunk_size: Tuple[int, ...]) -> None:
-        zarr.save(self.filename, data, chunks=chunk_size)
+        zarr.save(str(self.filename), data, chunks=chunk_size)
 
     def read(self, index: BasicIndexType) -> np.ndarray:
-        z = zarr.open(self.filename, mode="r")
-        return z["arr_0"][index]
+        z = zarr.open(str(self.filename), mode="r")
+        if not isinstance(z, zarr.Group):
+            raise TypeError("Expected a zarr Group")
+        array = z["arr_0"]
+        if not isinstance(array, zarr.Array):
+            raise TypeError("Expected a zarr Array")
+        return array[index]
 
 
 class NetCDFFormat(BaseFormat):

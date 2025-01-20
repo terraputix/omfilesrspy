@@ -5,10 +5,13 @@ from helpers.args import parse_args
 from helpers.formats import BaseFormat, FormatFactory
 from helpers.generate_data import generate_test_data
 from helpers.stats import measure_time
+from numpy.typing import NDArray
 from omfilesrspy.types import BasicIndexType
 
 
-def run_benchmark(format_handler: BaseFormat, data: np.ndarray, chunk_size: Tuple[int, ...], index: BasicIndexType):
+def run_benchmark(
+    format_handler: BaseFormat, data: NDArray[np.float32], chunk_size: Tuple[int, ...], index: BasicIndexType
+) -> Tuple[dict[str, float], NDArray[np.float32]]:
     results = {}
 
     # Measure write performance
