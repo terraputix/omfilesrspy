@@ -34,7 +34,6 @@ def main():
     # Defines chunk and array sizes
     args = parse_args()
     data = generate_test_data(args.array_size, noise_level=5, amplitude=20, offset=20)
-    index = (0, 0, 0, 0, ...)  # Define read index
 
     print("Data shape:", data.shape)
     print("Data type:", data.dtype)
@@ -46,15 +45,15 @@ def main():
         handler = FormatFactory.create(format_name, f"data.{format_name}")
 
         try:
-            format_results, read_data = run_benchmark(handler, data, args.chunk_size, index)
+            format_results, read_data = run_benchmark(handler, data, args.chunk_size, args.read_index)
             results[format_name] = format_results
 
-            # # Verify data
-            # if read_data.shape == args.array_size:
-            #     print(f"{format_name} first five elements: {read_data[0, :5]}")
-            # else:
-            #     print(f"    {format_name} read data shape is {read_data.shape}")
-            #     print(f"{read_data}")
+            # Verify data
+            if read_data.shape == args.array_size:
+                print(f"{format_name} first five elements: {read_data[0, :5]}")
+            else:
+                print(f"    {format_name} read data shape is {read_data.shape}")
+                print(f"{read_data}")
         except Exception as e:
             print(f"Error with {format_name}: {e}")
 
