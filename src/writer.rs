@@ -1,5 +1,8 @@
-use numpy::PyReadonlyArrayDyn;
-use omfiles_rs::{core::compression::CompressionType, io::writer::OmFileWriter};
+use numpy::{Element, PyReadonlyArrayDyn};
+use omfiles_rs::{
+    core::compression::CompressionType, core::data_types::OmFileArrayDataType,
+    io::writer::OmFileWriter,
+};
 use pyo3::prelude::*;
 use std::fs::File;
 
@@ -21,26 +24,79 @@ impl OmFilePyWriter {
         })
     }
 
-    #[pyo3(text_signature = "(data, chunks, scale_factor, add_offset)")]
-    fn write_array<'py>(
+    #[pyo3(text_signature = "(data, chunks, scale_factor, add_offset, compression='p4nzdec256')")]
+    fn write_array_f32(
         &mut self,
-        data: PyReadonlyArrayDyn<'py, f32>,
+        data: PyReadonlyArrayDyn<f32>,
         chunks: Vec<u64>,
         scale_factor: f32,
         add_offset: f32,
+        compression: PyCompressionType,
     ) -> PyResult<()> {
+        self.write_array_internal(
+            data,
+            chunks,
+            scale_factor,
+            add_offset,
+            compression.to_omfilesrs(),
+        )
+    }
+
+    #[pyo3(text_signature = "(data, chunks, scale_factor, add_offset, compression='p4nzdec256')")]
+    fn write_array_f64(
+        &mut self,
+        data: PyReadonlyArrayDyn<f64>,
+        chunks: Vec<u64>,
+        scale_factor: f32,
+        add_offset: f32,
+        compression: PyCompressionType,
+    ) -> PyResult<()> {
+        self.write_array_internal(
+            data,
+            chunks,
+            scale_factor,
+            add_offset,
+            compression.to_omfilesrs(),
+        )
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub enum PyCompressionType {
+    P4nzdec256,
+    Fpxdec32,
+    P4nzdec256logarithmic,
+}
+
+impl PyCompressionType {
+    fn to_omfilesrs(&self) -> CompressionType {
+        match self {
+            PyCompressionType::P4nzdec256 => CompressionType::P4nzdec256,
+            PyCompressionType::Fpxdec32 => CompressionType::Fpxdec32,
+            PyCompressionType::P4nzdec256logarithmic => CompressionType::P4nzdec256logarithmic,
+        }
+    }
+}
+
+impl OmFilePyWriter {
+    fn write_array_internal<'py, T>(
+        &mut self,
+        data: PyReadonlyArrayDyn<'py, T>,
+        chunks: Vec<u64>,
+        scale_factor: f32,
+        add_offset: f32,
+        compression: CompressionType,
+    ) -> PyResult<()>
+    where
+        T: Copy + Send + Sync + Element + OmFileArrayDataType,
+    {
         let shape = data.getattr("shape")?.extract::<Vec<u64>>()?;
         let dimensions = shape;
 
         let mut writer = self
             .file_writer
-            .prepare_array::<f32>(
-                dimensions,
-                chunks,
-                CompressionType::P4nzdec256,
-                scale_factor,
-                add_offset,
-            )
+            .prepare_array::<T>(dimensions, chunks, compression, scale_factor, add_offset)
             .map_err(convert_omfilesrs_error)?;
 
         let array = data.as_slice().expect("No array found behind `data`");
@@ -87,8 +143,13 @@ mod tests {
             let mut file_writer = OmFilePyWriter::new(file_path).unwrap();
 
             // Write data
-            let result =
-                file_writer.write_array(py_array.readonly(), chunks, scale_factor, add_offset);
+            let result = file_writer.write_array_f32(
+                py_array.readonly(),
+                chunks,
+                scale_factor,
+                add_offset,
+                PyCompressionType::P4nzdec256,
+            );
 
             assert!(result.is_ok());
             assert!(fs::metadata(file_path).is_ok());
