@@ -1,33 +1,44 @@
+from dataclasses import dataclass
 from typing import Tuple
 
 import numpy as np
 from helpers.args import parse_args
 from helpers.formats import BaseFormat, FormatFactory
 from helpers.generate_data import generate_test_data
-from helpers.stats import measure_time
+from helpers.stats import BenchmarkStats, measure_execution, run_multiple_benchmarks
 from numpy.typing import NDArray
 from omfilesrspy.types import BasicIndexType
 
 
-def run_benchmark(
-    format_handler: BaseFormat, data: NDArray[np.float32], chunk_size: Tuple[int, ...], index: BasicIndexType
-) -> Tuple[dict[str, float], NDArray[np.float32]]:
-    results = {}
+@dataclass
+class FormatBenchmarkResult:
+    write_stats: BenchmarkStats
+    read_stats: BenchmarkStats
+    sample_data: NDArray[np.float32]
 
+
+def benchmark_format(
+    format_handler: BaseFormat,
+    data: NDArray[np.float32],
+    chunk_size: Tuple[int, ...],
+    index: BasicIndexType,
+    iterations: int,
+) -> FormatBenchmarkResult:
     # Measure write performance
-    @measure_time
+    @measure_execution
     def write():
         format_handler.write(data, chunk_size)
 
     # Measure read performance
-    @measure_time
+    @measure_execution
     def read():
         return format_handler.read(index)
 
-    _, results["write_time"], results["cpu_write_time"] = write()
-    read_data, results["read_time"], results["cpu_read_time"] = read()
+    write_stats = run_multiple_benchmarks(write, iterations)
+    read_result = read()  # Get sample data for verification
+    read_stats = run_multiple_benchmarks(read, iterations)
 
-    return results, read_data
+    return FormatBenchmarkResult(write_stats=write_stats, read_stats=read_stats, sample_data=read_result.result)
 
 
 def main():
@@ -35,9 +46,13 @@ def main():
     args = parse_args()
     data = generate_test_data(args.array_size, noise_level=5, amplitude=20, offset=20)
 
-    print("Data shape:", data.shape)
-    print("Data type:", data.dtype)
-    print("Chunk size:", args.chunk_size)
+    print(
+        f"""
+Data shape: {data.shape}
+Data type: {data.dtype}
+Chunk size: {args.chunk_size}
+"""
+    )
 
     # Measure times
     results = {}
@@ -45,22 +60,29 @@ def main():
         handler = FormatFactory.create(format_name, f"data.{format_name}")
 
         try:
-            format_results, read_data = run_benchmark(handler, data, args.chunk_size, args.read_index)
-            results[format_name] = format_results
+            results[format_name] = benchmark_format(handler, data, args.chunk_size, args.read_index, args.iterations)
 
             # Verify data
+            read_data = results[format_name].sample_data
             if read_data.shape == args.array_size:
                 print(f"{format_name} first five elements: {read_data[0, :5]}")
             else:
-                print(f"    {format_name} read data shape is {read_data.shape}")
-                print(f"{read_data}")
+                print(f"{format_name} read data shape is {read_data.shape}")
+                # print(f"{read_data}")
         except Exception as e:
             print(f"Error with {format_name}: {e}")
 
     # Print results
-    for fmt, times in results.items():
-        print(f"{fmt} write time: {times['write_time']:.5f} seconds (CPU: {times['cpu_write_time']:.5f} seconds)")
-        print(f"{fmt} read time: {times['read_time']:.5f} seconds (CPU: {times['cpu_read_time']:.5f} seconds)")
+    for fmt, result in results.items():
+        print(f"\n{fmt} Results:")
+        print("Write:")
+        print(f"  Time: {result.write_stats.mean:.5f}s ± {result.write_stats.std:.5f}s")
+        print(f"  CPU Time: {result.write_stats.cpu_mean:.5f}s ± {result.write_stats.cpu_std:.5f}s")
+        print(f"  Memory Delta: {result.write_stats.memory_usage:.2f}MB")
+        print("Read:")
+        print(f"  Time: {result.read_stats.mean:.5f}s ± {result.read_stats.std:.5f}s")
+        print(f"  CPU Time: {result.read_stats.cpu_mean:.5f}s ± {result.read_stats.cpu_std:.5f}s")
+        print(f"  Memory Delta: {result.read_stats.memory_usage:.2f}MB")
 
 
 if __name__ == "__main__":
