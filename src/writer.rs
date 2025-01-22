@@ -89,6 +89,24 @@ impl OmFilePyWriter {
         } else if element_type.is_equiv_to(&dtype::<i64>(py)) {
             let array = data.downcast::<PyArrayDyn<i64>>()?.readonly();
             self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<u32>(py)) {
+            let array = data.downcast::<PyArrayDyn<u32>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<u64>(py)) {
+            let array = data.downcast::<PyArrayDyn<u64>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<i8>(py)) {
+            let array = data.downcast::<PyArrayDyn<i8>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<u8>(py)) {
+            let array = data.downcast::<PyArrayDyn<u8>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<i16>(py)) {
+            let array = data.downcast::<PyArrayDyn<i16>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<u16>(py)) {
+            let array = data.downcast::<PyArrayDyn<u16>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
         } else {
             Err(PyValueError::new_err(format!(
                 "Unsupported data type: {:?}",
@@ -108,10 +126,13 @@ impl OmFilePyWriter {
         compression: CompressionType,
     ) -> PyResult<()>
     where
-        T: Copy + Send + Sync + Element + OmFileArrayDataType,
+        T: Element + OmFileArrayDataType,
     {
-        let shape = data.getattr("shape")?.extract::<Vec<u64>>()?;
-        let dimensions = shape;
+        let dimensions = data
+            .shape()
+            .into_iter()
+            .map(|x| *x as u64)
+            .collect::<Vec<u64>>();
 
         let mut writer = self
             .file_writer
