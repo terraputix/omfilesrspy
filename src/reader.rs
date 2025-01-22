@@ -93,7 +93,7 @@ fn read_untyped_array<'py, T: Element + OmFileArrayDataType>(
         .map_err(convert_omfilesrs_error)?;
     let array = ArrayD::from_shape_vec(output_shape, flat_data)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
-    Ok(array.into_pyarray(py).as_untyped().to_owned())
+    Ok(array.into_pyarray(py).as_untyped().to_owned()) // FIXME: avoid cloning?
 }
 
 #[pyclass]
