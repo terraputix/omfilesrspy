@@ -1,4 +1,7 @@
-use numpy::{Element, PyReadonlyArrayDyn};
+use numpy::{
+    dtype, Element, PyArrayDescrMethods, PyArrayDyn, PyArrayMethods, PyReadonlyArrayDyn,
+    PyUntypedArray, PyUntypedArrayMethods,
+};
 use omfiles_rs::{
     core::compression::CompressionType, core::data_types::OmFileArrayDataType,
     io::writer::OmFileWriter,
@@ -52,53 +55,46 @@ impl OmFilePyWriter {
     }
 
     #[pyo3(
-        text_signature = "(data, chunks, /, *, scale_factor=1.0, add_offset=0.0, compression='p4nzdec256')",
-        signature = (data, chunks, scale_factor=None, add_offset=None, compression=None)
-    )]
-    fn write_array_f32(
+            text_signature = "(data, chunks, /, *, scale_factor=1.0, add_offset=0.0, compression='p4nzdec256')",
+            signature = (data, chunks, scale_factor=None, add_offset=None, compression=None)
+        )]
+    fn write_array(
         &mut self,
-        data: PyReadonlyArrayDyn<f32>,
+        data: &Bound<'_, PyUntypedArray>,
         chunks: Vec<u64>,
         scale_factor: Option<f32>,
         add_offset: Option<f32>,
         compression: Option<&str>,
     ) -> PyResult<()> {
-        let compression_type = match compression {
-            Some(s) => PyCompressionType::from_str(s)?,
-            None => PyCompressionType::P4nzdec256,
-        };
-        self.write_array_internal(
-            data,
-            chunks,
-            scale_factor.unwrap_or(1.0),
-            add_offset.unwrap_or(0.0),
-            compression_type.to_omfilesrs(),
-        )
-    }
+        let element_type = data.dtype();
+        let py = data.py();
 
-    #[pyo3(
-        text_signature = "(data, chunks, /, *, scale_factor=1.0, add_offset=0.0, compression='p4nzdec256')",
-        signature = (data, chunks, scale_factor=None, add_offset=None, compression=None)
-    )]
-    fn write_array_f64(
-        &mut self,
-        data: PyReadonlyArrayDyn<f64>,
-        chunks: Vec<u64>,
-        scale_factor: Option<f32>,
-        add_offset: Option<f32>,
-        compression: Option<&str>,
-    ) -> PyResult<()> {
-        let compression_type = match compression {
-            Some(s) => PyCompressionType::from_str(s)?,
-            None => PyCompressionType::P4nzdec256,
-        };
-        self.write_array_internal(
-            data,
-            chunks,
-            scale_factor.unwrap_or(1.0),
-            add_offset.unwrap_or(0.0),
-            compression_type.to_omfilesrs(),
-        )
+        let scale_factor = scale_factor.unwrap_or(1.0);
+        let add_offset = add_offset.unwrap_or(0.0);
+        let compression = compression
+            .map(|s| PyCompressionType::from_str(s))
+            .transpose()?
+            .unwrap_or(PyCompressionType::P4nzdec256)
+            .to_omfilesrs();
+
+        if element_type.is_equiv_to(&dtype::<f32>(py)) {
+            let array = data.downcast::<PyArrayDyn<f32>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<f64>(py)) {
+            let array = data.downcast::<PyArrayDyn<f64>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<i32>(py)) {
+            let array = data.downcast::<PyArrayDyn<i32>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else if element_type.is_equiv_to(&dtype::<i64>(py)) {
+            let array = data.downcast::<PyArrayDyn<i64>>()?.readonly();
+            self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
+        } else {
+            Err(PyValueError::new_err(format!(
+                "Unsupported data type: {:?}",
+                element_type
+            )))
+        }
     }
 }
 
@@ -164,7 +160,7 @@ mod tests {
             let mut file_writer = OmFilePyWriter::new(file_path).unwrap();
 
             // Write data
-            let result = file_writer.write_array_f32(py_array.readonly(), chunks, None, None, None);
+            let result = file_writer.write_array(py_array.as_untyped(), chunks, None, None, None);
 
             assert!(result.is_ok());
             assert!(fs::metadata(file_path).is_ok());
