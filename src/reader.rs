@@ -32,51 +32,58 @@ trait OmFilePyReaderTrait {
         let reader = self.get_reader();
         let dtype = reader.data_type();
 
-        let untyped_py_array = match dtype {
-            omfiles_rs::core::data_types::DataType::None => todo!(),
-            omfiles_rs::core::data_types::DataType::Int8 => todo!(),
-            omfiles_rs::core::data_types::DataType::Uint8 => todo!(),
-            omfiles_rs::core::data_types::DataType::Int16 => todo!(),
-            omfiles_rs::core::data_types::DataType::Uint16 => todo!(),
-            omfiles_rs::core::data_types::DataType::Int32 => todo!(),
-            omfiles_rs::core::data_types::DataType::Uint32 => todo!(),
-            omfiles_rs::core::data_types::DataType::Int64 => todo!(),
-            omfiles_rs::core::data_types::DataType::Uint64 => todo!(),
-            omfiles_rs::core::data_types::DataType::Float => todo!(),
-            omfiles_rs::core::data_types::DataType::Double => todo!(),
-            omfiles_rs::core::data_types::DataType::String => todo!(),
+        let scalar_error =
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Scalar data types are not supported");
+
+        let untyped_py_array_or_error = match dtype {
+            omfiles_rs::core::data_types::DataType::None => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int8 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint8 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int16 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint16 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int32 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint32 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int64 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint64 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Float => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Double => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::String => Err(scalar_error),
             omfiles_rs::core::data_types::DataType::Int8Array => {
-                read_untyped_array::<i8>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<i8>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::Uint8Array => {
-                read_untyped_array::<u8>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<u8>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::Int16Array => {
-                read_untyped_array::<i16>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<i16>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::Uint16Array => {
-                read_untyped_array::<u16>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<u16>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::Int32Array => {
-                read_untyped_array::<i32>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<i32>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::Uint32Array => {
-                read_untyped_array::<u32>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<u32>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::Int64Array => {
-                read_untyped_array::<i64>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<i64>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::Uint64Array => {
-                read_untyped_array::<u64>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<u64>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::FloatArray => {
-                read_untyped_array::<f32>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<f32>(&reader, read_ranges, output_shape, py)
             }
             omfiles_rs::core::data_types::DataType::DoubleArray => {
-                read_untyped_array::<f64>(&reader, read_ranges, output_shape, py)?
+                read_untyped_array::<f64>(&reader, read_ranges, output_shape, py)
             }
-            omfiles_rs::core::data_types::DataType::StringArray => todo!(),
+            omfiles_rs::core::data_types::DataType::StringArray => {
+                unimplemented!("String arrays are currently not implemented")
+            }
         };
+
+        let untyped_py_array = untyped_py_array_or_error?;
 
         return Ok(untyped_py_array);
     }
@@ -188,7 +195,7 @@ mod tests {
     use super::*;
     use crate::array_index::IndexType;
     use crate::create_test_binary_file;
-    use numpy::PyArrayMethods;
+    use numpy::{PyArrayDyn, PyArrayMethods};
 
     #[test]
     fn test_read_simple_v3_data() -> Result<(), Box<dyn std::error::Error>> {
@@ -211,6 +218,9 @@ mod tests {
                 },
             ]);
             let data = reader.__getitem__(py, ranges).expect("Could not get item!");
+            let data = data
+                .downcast::<PyArrayDyn<f32>>()
+                .expect("Could not downcast to PyArrayDyn<f32>");
             let read_only = data.readonly();
             let data = read_only.as_slice().expect("Could not convert to slice!");
             let expected_data = vec![
