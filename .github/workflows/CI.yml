@@ -39,7 +39,7 @@ jobs:
             manylinux: "2_28"
 
           # Musl x86_64
-          - runner: ubuntu-latest
+          - runner: ubuntu-22.04
             target: x86_64-unknown-linux-musl
             container: docker://messense/rust-musl-cross:x86_64-musl
             before-script: cat /etc/os-release && apt install clang -y
