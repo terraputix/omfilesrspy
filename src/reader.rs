@@ -43,6 +43,7 @@ trait OmFilePyReaderTrait {
 #[pyclass]
 pub struct OmFilePyReader {
     reader: OmFileReader<MmapFile>,
+    #[pyo3(get)]
     shape: Vec<u64>,
 }
 unsafe impl Send for OmFilePyReader {}

@@ -7,10 +7,9 @@ from typing import Any, Callable
 import h5py
 import netCDF4 as nc
 import numpy as np
+import omfilesrspy as om
 import xarray as xr
 import zarr
-
-import omfilesrspy as om
 
 # filenames
 h5_filename = "data.h5"
@@ -72,7 +71,7 @@ def write_zarr(data: np.typing.NDArray, chunk_size: tuple):
     # _z = zarr.array(
     #     data, chunks=chunk_size, compressor=compressor, chunk_store="data.zarr"
     # )
-    zarr.save(zarr_filename, data, chunks=chunk_size)
+    zarr.save(zarr_filename, data, chunks=np.array(chunk_size))
 
 
 @measure_time
@@ -128,6 +127,7 @@ def read_om():
     ds = xr.open_dataset(om_filename, engine=om.xarray_backend.OmXarrayEntrypoint)
     return ds["dataset"][0, 0, 0, 0, ...].values
 
+
 # Measure times
 results = {}
 formats = {
@@ -139,9 +139,7 @@ formats = {
 
 for fmt, (write_func, read_func) in formats.items():
     results[fmt] = {}
-    _, results[fmt]["write_time"], results[fmt]["cpu_write_time"] = write_func(
-        data, chunk_size
-    )
+    _, results[fmt]["write_time"], results[fmt]["cpu_write_time"] = write_func(data, chunk_size)
     read_data, results[fmt]["read_time"], results[fmt]["cpu_read_time"] = read_func()
 
     if read_data.shape == array_size:
@@ -153,9 +151,5 @@ for fmt, (write_func, read_func) in formats.items():
 
 # Print results
 for fmt, times in results.items():
-    print(
-        f"{fmt} write time: {times['write_time']:.4f} seconds (CPU: {times['cpu_write_time']:.4f} seconds)"
-    )
-    print(
-        f"{fmt} read time: {times['read_time']:.4f} seconds (CPU: {times['cpu_read_time']:.4f} seconds)"
-    )
+    print(f"{fmt} write time: {times['write_time']:.4f} seconds (CPU: {times['cpu_write_time']:.4f} seconds)")
+    print(f"{fmt} read time: {times['read_time']:.4f} seconds (CPU: {times['cpu_read_time']:.4f} seconds)")
