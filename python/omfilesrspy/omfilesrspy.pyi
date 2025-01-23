@@ -18,24 +18,32 @@ class OmFilePyWriter:
         """
         ...
 
-    def write_array_f32(
+    def write_array(
         self,
-        data: npt.NDArray[np.float32],
+        data: npt.NDArray[
+            Union[
+                np.float32, np.float64, np.int32, np.int64, np.uint32, np.uint64, np.int8, np.uint8, np.int16, np.uint16
+            ]
+        ],
         chunks: list[int] | tuple[int, ...],
-        scale_factor: float,
-        add_offset: float,
+        scale_factor: float = 1.0,
+        add_offset: float = 0.0,
+        compression: str = "p4nzdec256",
     ) -> None:
         """
         Write a numpy array to the .om file with specified chunking and scaling parameters.
 
         Args:
-            data: Input array of float32 values to be written
+            data: Input array to be written. Supported dtypes are:
+                 float32, float64, int32, int64, uint32, uint64, int8, uint8, int16, uint16
             chunks: Chunk sizes for each dimension of the array
-            scale_factor: Scale factor for data compression
-            add_offset: Offset value for data compression
+            scale_factor: Scale factor for data compression (default: 1.0)
+            add_offset: Offset value for data compression (default: 0.0)
+            compression: Compression algorithm to use (default: "p4nzdec256")
+                       Supported values: "p4nzdec256", "fpxdec32", "p4nzdec256logarithmic"
 
         Raises:
-            PyValueError: If the data or parameters are invalid
+            PyValueError: If the data type is unsupported or if parameters are invalid
             OSError: If there's an error writing to the file
         """
         ...
@@ -55,17 +63,32 @@ class OmFilePyReader:
         """
         ...
 
-    def __getitem__(self, ranges: BasicIndexType) -> npt.NDArray[np.float32]:
+    def __getitem__(
+        self, ranges: BasicIndexType
+    ) -> npt.NDArray[
+        Union[np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64, np.float32, np.float64]
+    ]:
         """
         Read data from the .om file using numpy-style indexing.
         Currently only slices with step 1 are supported.
 
+        The returned array will have singleton dimensions removed (squeezed).
+        For example, if you index a 3D array with [1,:,2], the result will
+        be a 1D array since dimensions 0 and 2 have size 1.
+
         Args:
             ranges: Index expression that can be either a single slice/integer
-                   or a tuple of slices/integers for multi-dimensional access
+                   or a tuple of slices/integers for multi-dimensional access.
+                   Supports NumPy basic indexing including:
+                   - Integers (e.g., a[1,2])
+                   - Slices (e.g., a[1:10])
+                   - Ellipsis (...)
+                   - None/newaxis
 
         Returns:
-            NDArray containing the requested data with squeezed singleton dimensions
+            NDArray containing the requested data with squeezed singleton dimensions.
+            The data type of the array matches the data type stored in the file
+            (int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, or float64).
 
         Raises:
             PyValueError: If the requested ranges are invalid or if there's an error reading the data
@@ -88,17 +111,32 @@ class OmFilePyFsSpecReader:
         """
         ...
 
-    def __getitem__(self, ranges: BasicIndexType) -> npt.NDArray[np.float32]:
+    def __getitem__(
+        self, ranges: BasicIndexType
+    ) -> npt.NDArray[
+        Union[np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64, np.float32, np.float64]
+    ]:
         """
         Read data from the .om file using numpy-style indexing.
         Currently only slices with step 1 are supported.
 
+        The returned array will have singleton dimensions removed (squeezed).
+        For example, if you index a 3D array with [1,:,2], the result will
+        be a 1D array since dimensions 0 and 2 have size 1.
+
         Args:
             ranges: Index expression that can be either a single slice/integer
-                   or a tuple of slices/integers for multi-dimensional access
+                   or a tuple of slices/integers for multi-dimensional access.
+                   Supports NumPy basic indexing including:
+                   - Integers (e.g., a[1,2])
+                   - Slices (e.g., a[1:10])
+                   - Ellipsis (...)
+                   - None/newaxis
 
         Returns:
-            NDArray containing the requested data with squeezed singleton dimensions
+            NDArray containing the requested data with squeezed singleton dimensions.
+            The data type of the array matches the data type stored in the file
+            (int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, or float64).
 
         Raises:
             PyValueError: If the requested ranges are invalid or if there's an error reading the data
