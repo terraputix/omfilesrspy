@@ -10,7 +10,9 @@ def test_write_om_file():
     file_writer = omfilesrspy.OmFilePyWriter(temp_file)
 
     # Write data
-    file_writer.write_array(test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0, compression="p4nzdec256")
+    file_writer.write_array(
+        test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0, compression="pfor_delta_2d_int16"
+    )
 
 
 # def test_read_om_file():

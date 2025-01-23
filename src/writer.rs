@@ -11,29 +11,36 @@ use std::fs::File;
 
 use crate::errors::convert_omfilesrs_error;
 
-#[pyclass]
 #[derive(Clone)]
 pub enum PyCompressionType {
-    P4nzdec256,
-    Fpxdec32,
-    P4nzdec256logarithmic,
+    PforDelta2dInt16,
+    FpxXor2d,
+    PforDelta2d,
+    PforDelta2dInt16Logarithmic,
 }
 
 impl PyCompressionType {
     fn to_omfilesrs(&self) -> CompressionType {
         match self {
-            PyCompressionType::P4nzdec256 => CompressionType::P4nzdec256,
-            PyCompressionType::Fpxdec32 => CompressionType::Fpxdec32,
-            PyCompressionType::P4nzdec256logarithmic => CompressionType::P4nzdec256logarithmic,
+            PyCompressionType::PforDelta2dInt16 => CompressionType::PforDelta2dInt16,
+            PyCompressionType::FpxXor2d => CompressionType::FpxXor2d,
+            PyCompressionType::PforDelta2d => CompressionType::PforDelta2d,
+            PyCompressionType::PforDelta2dInt16Logarithmic => {
+                CompressionType::PforDelta2dInt16Logarithmic
+            }
         }
     }
 
     fn from_str(s: &str) -> PyResult<Self> {
-        match s.to_lowercase().as_str() {
-            "p4nzdec256" => Ok(PyCompressionType::P4nzdec256),
-            "fpxdec32" => Ok(PyCompressionType::Fpxdec32),
-            "p4nzdec256logarithmic" => Ok(PyCompressionType::P4nzdec256logarithmic),
-            _ => Err(PyValueError::new_err("Invalid compression type")),
+        match s {
+            "pfor_delta_2d_int16" => Ok(PyCompressionType::PforDelta2dInt16),
+            "fpx_xor_2d" => Ok(PyCompressionType::FpxXor2d),
+            "pfor_delta_2d" => Ok(PyCompressionType::PforDelta2d),
+            "pfor_delta_2d_int16_logarithmic" => Ok(PyCompressionType::PforDelta2dInt16Logarithmic),
+            _ => Err(PyValueError::new_err(format!(
+                "Unsupported compression type: {}",
+                s
+            ))),
         }
     }
 }
@@ -55,7 +62,7 @@ impl OmFilePyWriter {
     }
 
     #[pyo3(
-            text_signature = "(data, chunks, /, *, scale_factor=1.0, add_offset=0.0, compression='p4nzdec256')",
+            text_signature = "(data, chunks, /, *, scale_factor=1.0, add_offset=0.0, compression='pfor_delta_2d')",
             signature = (data, chunks, scale_factor=None, add_offset=None, compression=None)
         )]
     fn write_array(
@@ -74,7 +81,7 @@ impl OmFilePyWriter {
         let compression = compression
             .map(|s| PyCompressionType::from_str(s))
             .transpose()?
-            .unwrap_or(PyCompressionType::P4nzdec256)
+            .unwrap_or(PyCompressionType::PforDelta2d)
             .to_omfilesrs();
 
         if element_type.is_equiv_to(&dtype::<f32>(py)) {
