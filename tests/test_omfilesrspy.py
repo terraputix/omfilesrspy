@@ -16,7 +16,8 @@ def test_write_om_file():
 
 
 def test_write_read_om_file_types():
-    shape = (5, 5)
+    shape = (5, 5, 5, 2)
+    chunks = [2, 2, 2, 1]
     test_cases = [
         (np.random.rand(*shape).astype(np.float32), "float32"),
         (np.random.rand(*shape).astype(np.float64), "float64"),
@@ -36,11 +37,13 @@ def test_write_read_om_file_types():
         try:
             # Write data
             writer = omfilesrspy.OmFilePyWriter(temp_file)
-            writer.write_array(test_data, chunks=[2, 2], scale_factor=10000.0, add_offset=0.0)
+            writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
+            del writer
 
             # Read data back
             reader = omfilesrspy.OmFilePyReader(temp_file)
             read_data = reader[:]
+            del reader
 
             # Verify data
             assert read_data.dtype == test_data.dtype
