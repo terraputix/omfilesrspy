@@ -1,3 +1,5 @@
+import os
+
 import fsspec
 import numpy as np
 import omfilesrspy
@@ -10,9 +12,45 @@ def test_write_om_file():
     file_writer = omfilesrspy.OmFilePyWriter(temp_file)
 
     # Write data
-    file_writer.write_array(
-        test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0, compression="pfor_delta_2d_int16"
-    )
+    file_writer.write_array(test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0, compression="pfor_delta_2d")
+
+
+def test_write_read_om_file_types():
+    shape = (5, 5)
+    test_cases = [
+        (np.random.rand(*shape).astype(np.float32), "float32"),
+        (np.random.rand(*shape).astype(np.float64), "float64"),
+        (np.random.randint(-128, 127, size=shape, dtype=np.int8), "int8"),
+        (np.random.randint(-32768, 32767, size=shape, dtype=np.int16), "int16"),
+        (np.random.randint(-2147483648, 2147483647, size=shape, dtype=np.int32), "int32"),
+        (np.random.randint(-9223372036854775808, 9223372036854775807, size=shape, dtype=np.int64), "int64"),
+        (np.random.randint(0, 255, size=shape, dtype=np.uint8), "uint8"),
+        (np.random.randint(0, 65535, size=shape, dtype=np.uint16), "uint16"),
+        (np.random.randint(0, 4294967295, size=shape, dtype=np.uint32), "uint32"),
+        (np.random.randint(0, 18446744073709551615, size=shape, dtype=np.uint64), "uint64"),
+    ]
+
+    for test_data, dtype in test_cases:
+        temp_file = f"test_file_{dtype}.om"
+
+        try:
+            # Write data
+            writer = omfilesrspy.OmFilePyWriter(temp_file)
+            writer.write_array(test_data, chunks=[2, 2], scale_factor=10000.0, add_offset=0.0)
+
+            # Read data back
+            reader = omfilesrspy.OmFilePyReader(temp_file)
+            read_data = reader[:]
+
+            # Verify data
+            assert read_data.dtype == test_data.dtype
+            assert read_data.shape == test_data.shape
+            # use assert_array_almost_equal since our floating point values are compressed lossy
+            np.testing.assert_array_almost_equal(read_data, test_data, decimal=4)
+
+        finally:
+            # Always try to remove the temp file
+            os.remove(temp_file)
 
 
 # def test_read_om_file():
