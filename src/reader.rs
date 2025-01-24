@@ -1,9 +1,11 @@
 use crate::{
     array_index::ArrayIndex, errors::convert_omfilesrs_error, fsspec_backend::FsSpecBackend,
 };
-use numpy::{ndarray::ArrayD, IntoPyArray, PyArrayDyn};
+use num_traits::Zero;
+use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
 use omfiles_rs::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
+    core::data_types::OmFileArrayDataType,
     io::reader::OmFileReader,
 };
 use pyo3::prelude::*;
@@ -18,26 +20,80 @@ trait OmFilePyReaderTrait {
         &self,
         py: Python<'py>,
         ranges: ArrayIndex,
-    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
+    ) -> PyResult<Bound<'py, PyUntypedArray>> {
         let read_ranges = ranges.to_read_range(self.get_shape())?;
-        // We only add dimensions that are no singleton dimensions to the output shape
-        // This is basically a dimensional squeeze and it is the same behavior as numpy
-        let output_shape = read_ranges
-            .iter()
-            .map(|range| (range.end - range.start) as usize)
-            .filter(|&size| size != 1)
-            .collect::<Vec<_>>();
 
-        let flat_data = self
-            .get_reader()
-            .read::<f32>(&read_ranges, None, None)
-            .map_err(convert_omfilesrs_error)?;
+        let reader = self.get_reader();
+        let dtype = reader.data_type();
 
-        let array = ArrayD::from_shape_vec(output_shape, flat_data)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+        let scalar_error =
+            PyErr::new::<pyo3::exceptions::PyValueError, _>("Scalar data types are not supported");
 
-        Ok(array.into_pyarray(py))
+        let untyped_py_array_or_error = match dtype {
+            omfiles_rs::core::data_types::DataType::None => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int8 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint8 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int16 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint16 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int32 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint32 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int64 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Uint64 => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Float => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Double => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::String => Err(scalar_error),
+            omfiles_rs::core::data_types::DataType::Int8Array => {
+                read_untyped_array::<i8>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::Uint8Array => {
+                read_untyped_array::<u8>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::Int16Array => {
+                read_untyped_array::<i16>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::Uint16Array => {
+                read_untyped_array::<u16>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::Int32Array => {
+                read_untyped_array::<i32>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::Uint32Array => {
+                read_untyped_array::<u32>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::Int64Array => {
+                read_untyped_array::<i64>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::Uint64Array => {
+                read_untyped_array::<u64>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::FloatArray => {
+                read_untyped_array::<f32>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::DoubleArray => {
+                read_untyped_array::<f64>(&reader, read_ranges, py)
+            }
+            omfiles_rs::core::data_types::DataType::StringArray => {
+                unimplemented!("String arrays are currently not implemented")
+            }
+        };
+
+        let untyped_py_array = untyped_py_array_or_error?;
+
+        return Ok(untyped_py_array);
     }
+}
+
+fn read_untyped_array<'py, T: Element + OmFileArrayDataType + Clone + Zero>(
+    reader: &OmFileReader<impl OmFileReaderBackend>,
+    read_ranges: Vec<std::ops::Range<u64>>,
+    py: Python<'py>,
+) -> PyResult<Bound<'py, PyUntypedArray>> {
+    let array = reader
+        .read::<T>(&read_ranges, None, None)
+        .map_err(convert_omfilesrs_error)?;
+    // We only add dimensions that are no singleton dimensions to the output shape
+    // This is basically a dimensional squeeze and it is the same behavior as numpy
+    Ok(array.squeeze().into_pyarray(py).as_untyped().to_owned()) // FIXME: avoid cloning?
 }
 
 #[pyclass]
@@ -63,7 +119,7 @@ impl OmFilePyReader {
         &self,
         py: Python<'py>,
         ranges: ArrayIndex,
-    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
+    ) -> PyResult<Bound<'py, PyUntypedArray>> {
         self.get_item(py, ranges)
     }
 }
@@ -113,7 +169,7 @@ impl OmFilePyFsSpecReader {
         &self,
         py: Python<'py>,
         ranges: ArrayIndex,
-    ) -> PyResult<Bound<'py, PyArrayDyn<f32>>> {
+    ) -> PyResult<Bound<'py, PyUntypedArray>> {
         self.get_item(py, ranges)
     }
 }
@@ -133,7 +189,7 @@ mod tests {
     use super::*;
     use crate::array_index::IndexType;
     use crate::create_test_binary_file;
-    use numpy::PyArrayMethods;
+    use numpy::{PyArrayDyn, PyArrayMethods, PyUntypedArrayMethods};
 
     #[test]
     fn test_read_simple_v3_data() -> Result<(), Box<dyn std::error::Error>> {
@@ -156,6 +212,12 @@ mod tests {
                 },
             ]);
             let data = reader.__getitem__(py, ranges).expect("Could not get item!");
+            let data = data
+                .downcast::<PyArrayDyn<f32>>()
+                .expect("Could not downcast to PyArrayDyn<f32>");
+
+            assert_eq!(data.shape(), [5, 5]);
+
             let read_only = data.readonly();
             let data = read_only.as_slice().expect("Could not convert to slice!");
             let expected_data = vec![

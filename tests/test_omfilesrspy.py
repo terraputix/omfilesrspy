@@ -1,38 +1,84 @@
+import os
+
 import fsspec
 import numpy as np
 import omfilesrspy
 
 
-def test_write_om_file():
+def test_write_om_roundtrip():
     # Create test data
-    test_data = np.random.rand(10, 10).astype(np.float32)
+    test_data = np.arange(25, dtype=np.float32).reshape(5, 5)
     temp_file = "test_file.om"
-    file_writer = omfilesrspy.OmFilePyWriter(temp_file)
 
-    # Write data
-    file_writer.write_array(test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0)
+    try:
+        # Write data
+        file_writer = omfilesrspy.OmFilePyWriter(temp_file)
+        file_writer.write_array(test_data, chunks=[5, 5])
+        del file_writer
+
+        # Read data back
+        reader = omfilesrspy.OmFilePyReader(temp_file)
+        data = reader[0:5, 0:5]
+        del reader
+
+        # Check data
+        assert data.shape == (5, 5)
+        assert data.dtype == np.float32
+        np.testing.assert_array_equal(
+            data,
+            [
+                [0.0, 1.0, 2.0, 3.0, 4.0],
+                [5.0, 6.0, 7.0, 8.0, 9.0],
+                [10.0, 11.0, 12.0, 13.0, 14.0],
+                [15.0, 16.0, 17.0, 18.0, 19.0],
+                [20.0, 21.0, 22.0, 23.0, 24.0],
+            ],
+        )
+
+    finally:
+        # Clean up
+        os.remove(temp_file)
 
 
-# def test_read_om_file():
-#     # To run this test you need to execute cargo test --no-default-features once to create the test data...
-#     # Read data
-#     temp_file = "test_files/read_test.om"
-#     reader = omfilesrspy.OmFilePyReader(temp_file)
-#     data = reader[0:5, 0:5]
+def test_round_trip_array_datatypes():
+    shape = (5, 5, 5, 2)
+    chunks = [2, 2, 2, 1]
+    test_cases = [
+        (np.random.rand(*shape).astype(np.float32), "float32"),
+        (np.random.rand(*shape).astype(np.float64), "float64"),
+        (np.random.randint(-128, 127, size=shape, dtype=np.int8), "int8"),
+        (np.random.randint(-32768, 32767, size=shape, dtype=np.int16), "int16"),
+        (np.random.randint(-2147483648, 2147483647, size=shape, dtype=np.int32), "int32"),
+        (np.random.randint(-9223372036854775808, 9223372036854775807, size=shape, dtype=np.int64), "int64"),
+        (np.random.randint(0, 255, size=shape, dtype=np.uint8), "uint8"),
+        (np.random.randint(0, 65535, size=shape, dtype=np.uint16), "uint16"),
+        (np.random.randint(0, 4294967295, size=shape, dtype=np.uint32), "uint32"),
+        (np.random.randint(0, 18446744073709551615, size=shape, dtype=np.uint64), "uint64"),
+    ]
 
-#     # Check data
-#     assert data.shape == (5, 5)
-#     assert data.dtype == np.float32
-#     np.testing.assert_array_equal(
-#         data,
-#         [
-#             [0.0, 1.0, 2.0, 3.0, 4.0],
-#             [5.0, 6.0, 7.0, 8.0, 9.0],
-#             [10.0, 11.0, 12.0, 13.0, 14.0],
-#             [15.0, 16.0, 17.0, 18.0, 19.0],
-#             [20.0, 21.0, 22.0, 23.0, 24.0],
-#         ],
-#     )
+    for test_data, dtype in test_cases:
+        temp_file = f"test_file_{dtype}.om"
+
+        try:
+            # Write data
+            writer = omfilesrspy.OmFilePyWriter(temp_file)
+            writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
+            del writer
+
+            # Read data back
+            reader = omfilesrspy.OmFilePyReader(temp_file)
+            read_data = reader[:]
+            del reader
+
+            # Verify data
+            assert read_data.dtype == test_data.dtype
+            assert read_data.shape == test_data.shape
+            # use assert_array_almost_equal since our floating point values are compressed lossy
+            np.testing.assert_array_almost_equal(read_data, test_data, decimal=4)
+
+        finally:
+            # Always try to remove the temp file
+            os.remove(temp_file)
 
 
 # def test_fsspec_backend():

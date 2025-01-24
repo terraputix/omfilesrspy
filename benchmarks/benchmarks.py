@@ -113,6 +113,7 @@ def write_om(data: np.typing.NDArray, chunk_size: tuple):
         chunk_size,
         100,
         0,
+        compression="pfor_delta_2d_int16",
     )
 
 
