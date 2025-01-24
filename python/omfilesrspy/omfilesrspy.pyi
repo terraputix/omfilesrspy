@@ -42,7 +42,7 @@ class OmFilePyWriter:
         chunks: list[int] | tuple[int, ...],
         scale_factor: float = 1.0,
         add_offset: float = 0.0,
-        compression: str = "p4nzdec256",
+        compression: str = "pfor_delta_2d",
     ) -> None:
         """
         Write a numpy array to the .om file with specified chunking and scaling parameters.
@@ -53,8 +53,8 @@ class OmFilePyWriter:
             chunks: Chunk sizes for each dimension of the array
             scale_factor: Scale factor for data compression (default: 1.0)
             add_offset: Offset value for data compression (default: 0.0)
-            compression: Compression algorithm to use (default: "p4nzdec256")
-                       Supported values: "p4nzdec256", "fpxdec32", "p4nzdec256logarithmic"
+            compression: Compression algorithm to use (default: "pfor_delta_2d")
+                       Supported values: "pfor_delta_2d", "fpx_xor_2d", "pfor_delta_2d_int16", "pfor_delta_2d_int16_logarithmic"
 
         Raises:
             PyValueError: If the data type is unsupported or if parameters are invalid

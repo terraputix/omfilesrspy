@@ -15,7 +15,7 @@ def test_write_om_file():
     file_writer.write_array(test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0, compression="pfor_delta_2d")
 
 
-def test_write_read_om_file_types():
+def test_round_trip_array_datatypes():
     shape = (5, 5, 5, 2)
     chunks = [2, 2, 2, 1]
     test_cases = [
