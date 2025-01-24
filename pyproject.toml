@@ -25,3 +25,6 @@ bindings = "pyo3"        # pyo3 bindings is actually the default for maturin
 
 [project.optional-dependencies]
 dev = ["pytest>=6.0"]
+
+[project.entry-points."xarray.backends"]
+om = "omfilesrspy.xarray_backend:OmXarrayEntrypoint"

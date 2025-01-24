@@ -125,7 +125,7 @@ def write_om(data: np.typing.NDArray, chunk_size: tuple):
 
 @measure_time
 def read_om():
-    ds = xr.open_dataset(om_filename, engine=om.xarray_backend.OmXarrayEntrypoint)
+    ds = xr.open_dataset(om_filename, engine="om")
     return ds["dataset"][0, 0, 0, 0, ...].values
 
 

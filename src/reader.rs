@@ -1,5 +1,6 @@
 use crate::{
-    array_index::ArrayIndex, errors::convert_omfilesrs_error, fsspec_backend::FsSpecBackend,
+    array_index::ArrayIndex, data_type::to_numpy_dtype, errors::convert_omfilesrs_error,
+    fsspec_backend::FsSpecBackend,
 };
 use num_traits::Zero;
 use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
@@ -171,6 +172,10 @@ impl OmFilePyFsSpecReader {
         ranges: ArrayIndex,
     ) -> PyResult<Bound<'py, PyUntypedArray>> {
         self.get_item(py, ranges)
+    }
+
+    fn dtype(&self) -> PyResult<String> {
+        Ok(to_numpy_dtype(&self.reader.data_type()).to_string())
     }
 }
 
