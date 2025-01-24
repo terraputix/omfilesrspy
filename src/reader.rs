@@ -1,7 +1,8 @@
 use crate::{
     array_index::ArrayIndex, errors::convert_omfilesrs_error, fsspec_backend::FsSpecBackend,
 };
-use numpy::{ndarray::ArrayD, Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
+use num_traits::Zero;
+use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
 use omfiles_rs::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
     core::data_types::OmFileArrayDataType,
@@ -21,13 +22,6 @@ trait OmFilePyReaderTrait {
         ranges: ArrayIndex,
     ) -> PyResult<Bound<'py, PyUntypedArray>> {
         let read_ranges = ranges.to_read_range(self.get_shape())?;
-        // We only add dimensions that are no singleton dimensions to the output shape
-        // This is basically a dimensional squeeze and it is the same behavior as numpy
-        let output_shape = read_ranges
-            .iter()
-            .map(|range| (range.end - range.start) as usize)
-            .filter(|&size| size != 1)
-            .collect::<Vec<_>>();
 
         let reader = self.get_reader();
         let dtype = reader.data_type();
@@ -49,34 +43,34 @@ trait OmFilePyReaderTrait {
             omfiles_rs::core::data_types::DataType::Double => Err(scalar_error),
             omfiles_rs::core::data_types::DataType::String => Err(scalar_error),
             omfiles_rs::core::data_types::DataType::Int8Array => {
-                read_untyped_array::<i8>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<i8>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::Uint8Array => {
-                read_untyped_array::<u8>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<u8>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::Int16Array => {
-                read_untyped_array::<i16>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<i16>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::Uint16Array => {
-                read_untyped_array::<u16>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<u16>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::Int32Array => {
-                read_untyped_array::<i32>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<i32>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::Uint32Array => {
-                read_untyped_array::<u32>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<u32>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::Int64Array => {
-                read_untyped_array::<i64>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<i64>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::Uint64Array => {
-                read_untyped_array::<u64>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<u64>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::FloatArray => {
-                read_untyped_array::<f32>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<f32>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::DoubleArray => {
-                read_untyped_array::<f64>(&reader, read_ranges, output_shape, py)
+                read_untyped_array::<f64>(&reader, read_ranges, py)
             }
             omfiles_rs::core::data_types::DataType::StringArray => {
                 unimplemented!("String arrays are currently not implemented")
@@ -89,18 +83,17 @@ trait OmFilePyReaderTrait {
     }
 }
 
-fn read_untyped_array<'py, T: Element + OmFileArrayDataType>(
+fn read_untyped_array<'py, T: Element + OmFileArrayDataType + Clone + Zero>(
     reader: &OmFileReader<impl OmFileReaderBackend>,
     read_ranges: Vec<std::ops::Range<u64>>,
-    output_shape: Vec<usize>,
     py: Python<'py>,
 ) -> PyResult<Bound<'py, PyUntypedArray>> {
-    let flat_data = reader
+    let array = reader
         .read::<T>(&read_ranges, None, None)
         .map_err(convert_omfilesrs_error)?;
-    let array = ArrayD::from_shape_vec(output_shape, flat_data)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
-    Ok(array.into_pyarray(py).as_untyped().to_owned()) // FIXME: avoid cloning?
+    // We only add dimensions that are no singleton dimensions to the output shape
+    // This is basically a dimensional squeeze and it is the same behavior as numpy
+    Ok(array.squeeze().into_pyarray(py).as_untyped().to_owned()) // FIXME: avoid cloning?
 }
 
 #[pyclass]

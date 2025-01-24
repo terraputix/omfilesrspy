@@ -146,10 +146,8 @@ impl OmFilePyWriter {
             .prepare_array::<T>(dimensions, chunks, compression, scale_factor, add_offset)
             .map_err(convert_omfilesrs_error)?;
 
-        let array = data.as_slice().expect("No array found behind `data`");
-
         writer
-            .write_data(array, None, None, None)
+            .write_data(data.as_array(), None, None)
             .map_err(convert_omfilesrs_error)?;
 
         let variable_meta = writer.finalize();
