@@ -188,7 +188,7 @@ mod tests {
     use super::*;
     use crate::array_index::IndexType;
     use crate::create_test_binary_file;
-    use numpy::{PyArrayDyn, PyArrayMethods};
+    use numpy::{PyArrayDyn, PyArrayMethods, PyUntypedArrayMethods};
 
     #[test]
     fn test_read_simple_v3_data() -> Result<(), Box<dyn std::error::Error>> {
@@ -214,6 +214,9 @@ mod tests {
             let data = data
                 .downcast::<PyArrayDyn<f32>>()
                 .expect("Could not downcast to PyArrayDyn<f32>");
+
+            assert_eq!(data.shape(), [5, 5]);
+
             let read_only = data.readonly();
             let data = read_only.as_slice().expect("Could not convert to slice!");
             let expected_data = vec![
