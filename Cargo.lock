@@ -293,9 +293,9 @@ dependencies = [
 
 [[package]]
 name = "om-file-format-sys"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5715a9f9c13e77971df43048c61c36c8182d88e64f8a2d8b27ad17523bd32e42"
+checksum = "f3b4509739abe80bc3998fb32d296087681f2df8883c49bfd531487d378c22da"
 dependencies = [
  "bindgen",
  "cc",
