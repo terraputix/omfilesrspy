@@ -5,14 +5,39 @@ import numpy as np
 import omfilesrspy
 
 
-def test_write_om_file():
+def test_write_om_roundtrip():
     # Create test data
-    test_data = np.random.rand(10, 10).astype(np.float32)
+    test_data = np.arange(25, dtype=np.float32).reshape(5, 5)
     temp_file = "test_file.om"
-    file_writer = omfilesrspy.OmFilePyWriter(temp_file)
 
-    # Write data
-    file_writer.write_array(test_data, chunks=[5, 5], scale_factor=1.0, add_offset=0.0, compression="pfor_delta_2d")
+    try:
+        # Write data
+        file_writer = omfilesrspy.OmFilePyWriter(temp_file)
+        file_writer.write_array(test_data, chunks=[5, 5])
+        del file_writer
+
+        # Read data back
+        reader = omfilesrspy.OmFilePyReader(temp_file)
+        data = reader[0:5, 0:5]
+        del reader
+
+        # Check data
+        assert data.shape == (5, 5)
+        assert data.dtype == np.float32
+        np.testing.assert_array_equal(
+            data,
+            [
+                [0.0, 1.0, 2.0, 3.0, 4.0],
+                [5.0, 6.0, 7.0, 8.0, 9.0],
+                [10.0, 11.0, 12.0, 13.0, 14.0],
+                [15.0, 16.0, 17.0, 18.0, 19.0],
+                [20.0, 21.0, 22.0, 23.0, 24.0],
+            ],
+        )
+
+    finally:
+        # Clean up
+        os.remove(temp_file)
 
 
 def test_round_trip_array_datatypes():
@@ -54,28 +79,6 @@ def test_round_trip_array_datatypes():
         finally:
             # Always try to remove the temp file
             os.remove(temp_file)
-
-
-# def test_read_om_file():
-#     # To run this test you need to execute cargo test --no-default-features once to create the test data...
-#     # Read data
-#     temp_file = "test_files/read_test.om"
-#     reader = omfilesrspy.OmFilePyReader(temp_file)
-#     data = reader[0:5, 0:5]
-
-#     # Check data
-#     assert data.shape == (5, 5)
-#     assert data.dtype == np.float32
-#     np.testing.assert_array_equal(
-#         data,
-#         [
-#             [0.0, 1.0, 2.0, 3.0, 4.0],
-#             [5.0, 6.0, 7.0, 8.0, 9.0],
-#             [10.0, 11.0, 12.0, 13.0, 14.0],
-#             [15.0, 16.0, 17.0, 18.0, 19.0],
-#             [20.0, 21.0, 22.0, 23.0, 24.0],
-#         ],
-#     )
 
 
 # def test_fsspec_backend():
