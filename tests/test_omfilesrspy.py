@@ -14,12 +14,10 @@ def test_write_om_roundtrip():
     try:
         create_test_om_file(temp_file)
 
-        # Read data back
         reader = omfilesrspy.OmFilePyReader(temp_file)
         data = reader[0:5, 0:5]
         del reader
 
-        # Check data
         assert data.shape == (5, 5)
         assert data.dtype == np.float32
         np.testing.assert_array_equal(
@@ -42,10 +40,11 @@ def test_xarray_backend():
 
     try:
         create_test_om_file(temp_file)
-        with xr.open_dataset(temp_file, engine="om") as ds:
-            data = ds["dataset"][:].values
 
-        # Check data
+        ds = xr.open_dataset(temp_file, engine="om")
+        data = ds["dataset"][:].values
+        del ds
+
         assert data.shape == (5, 5)
         assert data.dtype == np.float32
         np.testing.assert_array_equal(

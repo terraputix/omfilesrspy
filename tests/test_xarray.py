@@ -35,5 +35,7 @@ def test_om_backend_xarray_dtype():
 
             data = xr.Variable(dims=["x", "y"], data=indexing.LazilyIndexedArray(backend_array))
             assert data.dtype == dtype
+
+            del data, backend_array, reader
         finally:
             os.remove(temp_file)
