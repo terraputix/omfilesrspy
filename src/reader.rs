@@ -81,6 +81,10 @@ impl OmFilePyReader {
         })
     }
 
+    fn dtype(&self) -> PyResult<String> {
+        Ok(to_numpy_dtype(&self.reader.data_type()).to_string())
+    }
+
     fn __getitem__<'py>(
         &self,
         py: Python<'py>,

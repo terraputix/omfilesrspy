@@ -55,6 +55,3 @@ class OmXarrayEntrypoint(BackendEntrypoint):
     description = "Use .om files in Xarray"
 
     url = "https://github.com/open-meteo/om-file-format/"
-
-
-# TODO: Register the backend in pyproject.toml

@@ -77,6 +77,48 @@ class OmFilePyReader:
         """
         ...
 
+    @property
+    def shape(self) -> Tuple[int, ...]:
+        """
+        Get the shape of the data stored in the .om file.
+
+        Returns:
+            Tuple containing the dimensions of the data
+        """
+        ...
+
+    def dtype(self) -> np.dtype:
+        """
+        Get the data type of the data stored in the .om file.
+
+        Returns:
+            Numpy data type of the data
+        """
+
+    @classmethod
+    def from_path(cls, path: str) -> "OmFilePyReader":
+        """
+        Create an OmFilePyReader from a file path.
+
+        Args:
+            path: Path to the .om file to read
+
+        Returns:
+            OmFilePyReader instance
+        """
+
+    @classmethod
+    def from_fsspec(cls, file_obj: object) -> "OmFilePyReader":
+        """
+        Create an OmFilePyReader from a fsspec file object.
+
+        Args:
+            file_obj: fsspec file object with read, seek methods and fs attribute
+
+        Returns:
+            OmFilePyReader instance
+        """
+
     def __getitem__(
         self, ranges: BasicIndexType
     ) -> npt.NDArray[

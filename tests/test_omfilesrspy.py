@@ -5,16 +5,14 @@ import numpy as np
 import omfilesrspy
 import xarray as xr
 
+from .test_utils import create_test_om_file
+
 
 def test_write_om_roundtrip():
-    test_data = np.arange(25, dtype=np.float32).reshape(5, 5)
     temp_file = "test_file.om"
 
     try:
-        # Write data
-        file_writer = omfilesrspy.OmFilePyWriter(temp_file)
-        file_writer.write_array(test_data, chunks=[5, 5])
-        del file_writer
+        create_test_om_file(temp_file)
 
         # Read data back
         reader = omfilesrspy.OmFilePyReader(temp_file)
@@ -40,15 +38,10 @@ def test_write_om_roundtrip():
 
 
 def test_xarray_backend():
-    test_data = np.arange(25, dtype=np.float32).reshape(5, 5)
     temp_file = "test_file.om"
 
     try:
-        # Write data
-        writer = omfilesrspy.OmFilePyWriter(temp_file)
-        writer.write_array(test_data, chunks=[5, 5])
-        del writer
-
+        create_test_om_file(temp_file)
         with xr.open_dataset(temp_file, engine="om") as ds:
             data = ds["dataset"][:].values
 
