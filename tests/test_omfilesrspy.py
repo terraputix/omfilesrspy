@@ -51,6 +51,7 @@ def test_xarray_backend():
 
         ds = xr.open_dataset(temp_file, engine="om")
         data = ds["dataset"][:].values
+        del ds
 
         # Check data
         assert data.shape == (5, 5)
