@@ -42,17 +42,3 @@ Then run the benchmarks:
 ```bash
 python benchmarks/benchmarks.py
 ```
-
-## Benchmarks
-
-Before running the benchmarks, make sure to compile the release version of the library:
-
-```bash
-maturin develop --release
-```
-
-Then run the benchmarks:
-
-```bash
-python benchmarks/benchmarks.py
-```

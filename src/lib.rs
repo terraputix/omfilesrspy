@@ -12,7 +12,6 @@ mod writer;
 fn omfilesrspy<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
     m.add_class::<reader::OmFilePyReader>()?;
     m.add_class::<writer::OmFilePyWriter>()?;
-    m.add_class::<reader::OmFilePyFsSpecReader>()?;
 
     Ok(())
 }

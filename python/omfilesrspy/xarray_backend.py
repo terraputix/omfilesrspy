@@ -17,7 +17,7 @@ class OmBackendArray(BackendArray):
 
     @property
     def dtype(self):
-        return self.reader.dtype()
+        return np.dtype(self.reader.dtype())
 
     def __getitem__(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         return indexing.explicit_indexing_adapter(

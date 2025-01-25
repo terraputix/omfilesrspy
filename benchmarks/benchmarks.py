@@ -8,7 +8,6 @@ import h5py
 import netCDF4 as nc
 import numpy as np
 import omfilesrspy as om
-import xarray as xr
 import zarr
 
 # filenames
@@ -26,7 +25,7 @@ noise = np.random.normal(0, 5, array_size)  # Add some noise
 data = (sinusoidal_data + noise).astype(np.float32)
 
 # Define chunk size
-chunk_size = (10, 5, 1, 1, 1, 1)
+chunk_size = (10, 5, 1, 10, 10, 10)
 
 print("Data shape:", data.shape)
 print("Data type:", data.dtype)
@@ -117,16 +116,16 @@ def write_om(data: np.typing.NDArray, chunk_size: tuple):
     )
 
 
-# @measure_time
-# def read_om():
-#     reader = om.OmFilePyReader("data.om")
-#     return reader[0, 0, 0, 0, ...]
-
-
 @measure_time
 def read_om():
-    ds = xr.open_dataset(om_filename, engine="om")
-    return ds["dataset"][0, 0, 0, 0, ...].values
+    reader = om.OmFilePyReader("data.om")
+    return reader[0, 0, 0, 0, ...]
+
+
+# @measure_time
+# def read_om():
+#     ds = xr.open_dataset(om_filename, engine="om")
+#     return ds["dataset"][0, 0, 0, 0, ...].values
 
 
 # Measure times
