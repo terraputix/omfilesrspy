@@ -62,7 +62,7 @@ impl OmFilePyWriter {
     }
 
     #[pyo3(
-            text_signature = "(data, chunks, /, *, scale_factor=1.0, add_offset=0.0, compression='pfor_delta_2d'), name='data'",
+            text_signature = "(data, chunks, /, *, scale_factor=1.0, add_offset=0.0, compression='pfor_delta_2d', name='data')",
             signature = (data, chunks, scale_factor=None, add_offset=None, compression=None, name=None)
         )]
     fn write_array(
