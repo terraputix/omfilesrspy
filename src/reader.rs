@@ -8,10 +8,10 @@ use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
 use omfiles_rs::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
     core::data_types::OmFileArrayDataType,
-    io::reader::OmFileReader,
+    io::reader::{OffsetSize, OmFileReader},
 };
 use pyo3::prelude::*;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 #[pyclass]
 pub struct OmFilePyReader {
@@ -81,8 +81,30 @@ impl OmFilePyReader {
         })
     }
 
+    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, (u64, u64)>> {
+        let metadata = self.reader.get_flat_variable_metadata();
+        Ok(metadata
+            .into_iter()
+            .map(|(key, offset_size)| (key, (offset_size.offset, offset_size.size)))
+            .collect())
+    }
+
+    fn init_from_offset_size(&self, offset: u64, size: u64) -> PyResult<Self> {
+        let reader = self
+            .reader
+            .init_child_from_offset_size(OffsetSize { offset, size })
+            .map_err(convert_omfilesrs_error)?;
+
+        let shape = reader.get_dimensions().to_vec();
+        Ok(Self { reader, shape })
+    }
+
     fn dtype(&self) -> PyResult<String> {
         Ok(to_numpy_dtype(&self.reader.data_type()).to_string())
+    }
+
+    fn variable_name(&self) -> PyResult<String> {
+        Ok(self.reader.get_name().unwrap_or("".to_string()))
     }
 
     fn __getitem__<'py>(

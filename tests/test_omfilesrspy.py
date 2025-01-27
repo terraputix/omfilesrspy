@@ -42,7 +42,7 @@ def test_xarray_backend():
         create_test_om_file(temp_file)
 
         ds = xr.open_dataset(temp_file, engine="om")
-        data = ds["dataset"][:].values
+        data = ds["data"][:].values
         del ds
 
         assert data.shape == (5, 5)

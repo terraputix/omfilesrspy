@@ -28,7 +28,7 @@ def test_om_backend_xarray_dtype():
             create_test_om_file(temp_file, dtype=dtype)
 
             reader = OmFilePyReader(temp_file)
-            backend_array = OmBackendArray(reader, "dataset")
+            backend_array = OmBackendArray(reader=reader)
 
             assert isinstance(backend_array.dtype, np.dtype)
             assert backend_array.dtype == dtype
