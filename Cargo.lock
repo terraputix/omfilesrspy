@@ -84,6 +84,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "delegate"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "297806318ef30ad066b15792a8372858020ae3ca2e414ee6c2133b1eb9e9e945"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -305,7 +316,7 @@ dependencies = [
 [[package]]
 name = "omfiles-rs"
 version = "0.1.0"
-source = "git+https://github.com/terraputix/omfiles-rs?branch=main#b22423b7589b0c0dcc3a88ac93ace70a14f9d65f"
+source = "git+https://github.com/terraputix/omfiles-rs?branch=main#b3904ff18577213de91b606c808508ab1f7eb353"
 dependencies = [
  "memmap2",
  "ndarray",
@@ -317,6 +328,7 @@ dependencies = [
 name = "omfilesrspy"
 version = "0.1.0"
 dependencies = [
+ "delegate",
  "num-traits",
  "numpy",
  "omfiles-rs",
