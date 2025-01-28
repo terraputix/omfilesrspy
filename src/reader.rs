@@ -8,7 +8,7 @@ use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
 use omfiles_rs::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
     core::data_types::OmFileArrayDataType,
-    io::reader::{OffsetSize, OmFileReader},
+    io::{reader::OmFileReader, writer::OmOffsetSize},
 };
 use pyo3::prelude::*;
 use std::{collections::HashMap, sync::Arc};
@@ -92,7 +92,7 @@ impl OmFilePyReader {
     fn init_from_offset_size(&self, offset: u64, size: u64) -> PyResult<Self> {
         let reader = self
             .reader
-            .init_child_from_offset_size(OffsetSize { offset, size })
+            .init_child_from_offset_size(OmOffsetSize::new(offset, size))
             .map_err(convert_omfilesrs_error)?;
 
         let shape = reader.get_dimensions().to_vec();
