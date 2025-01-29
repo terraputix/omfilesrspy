@@ -2,6 +2,8 @@ from argparse import Namespace
 
 from helpers.args import parse_args
 from helpers.formats import FormatFactory
+from helpers.generate_data import generate_test_data
+from helpers.prints import print_data_info
 from helpers.stats import (
     measure_execution,
     print_read_benchmark_results,
@@ -10,11 +12,27 @@ from helpers.stats import (
 )
 from zarr.core.buffer import NDArrayLike
 
+# Define separate dictionaries for read and write formats and filenames
+write_formats_and_filenames = {
+    "h5": "benchmark_files/data.h5",
+    "zarr": "benchmark_files/data.zarr",
+    "nc": "benchmark_files/data.nc",
+    "om": "benchmark_files/data.om",
+}
+
+read_formats_and_filenames = {
+    "h5": "benchmark_files/data.h5",
+    "h5hidefix": "benchmark_files/data.h5",
+    "zarr": "benchmark_files/data.zarr",
+    "nc": "benchmark_files/data.nc",
+    "om": "benchmark_files/data.om",
+}
+
 
 def bm_write_all_formats(args: Namespace, data: NDArrayLike):
     write_results = {}
-    for format_name in ["h5", "zarr", "nc", "om"]:
-        writer = FormatFactory.create_writer(format_name, f"data.{format_name}")
+    for format_name, file in write_formats_and_filenames.items():
+        writer = FormatFactory.create_writer(format_name, file)
 
         @measure_execution
         def write():
@@ -30,16 +48,8 @@ def bm_write_all_formats(args: Namespace, data: NDArrayLike):
 
 
 def bm_read_all_formats(args: Namespace):
-    formats_and_filenames = {
-        "h5": "data.h5",
-        "h5hidefix": "data.h5",
-        "zarr": "data.zarr",
-        "nc": "data.nc",
-        "om": "data.om",
-    }
-
     read_results = {}
-    for format_name, file in formats_and_filenames.items():
+    for format_name, file in read_formats_and_filenames.items():
         reader = FormatFactory.create_reader(format_name, file)
 
         @measure_execution
@@ -63,9 +73,9 @@ def main():
     # Defines chunk and array sizes
     args = parse_args()
 
-    # data = generate_test_data(args.array_size, noise_level=5, amplitude=20, offset=20)
-    # print_data_info(data, args.chunk_size)
-    # bm_write_all_formats(args, data)
+    data = generate_test_data(args.array_size, noise_level=5, amplitude=20, offset=20)
+    print_data_info(data, args.chunk_size)
+    bm_write_all_formats(args, data)
 
     bm_read_all_formats(args)
 

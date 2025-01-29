@@ -1,11 +1,10 @@
-import os
+import gc
 import statistics
 import time
+import tracemalloc
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Callable, Dict, List, NamedTuple, TypeVar
-
-import psutil
 
 T = TypeVar("T")
 
@@ -28,15 +27,13 @@ class MeasurementResult(NamedTuple):
     memory_delta: float
 
 
-def get_memory_usage():
-    process = psutil.Process(os.getpid())
-    return process.memory_info().rss / 1024  # Convert to KB
-
-
 def measure_execution(func: Callable[..., T]) -> Callable[..., MeasurementResult]:
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> MeasurementResult:
-        before_mem = get_memory_usage()
+        gc.collect()
+
+        tracemalloc.start()
+        start_snapshot = tracemalloc.take_snapshot()
         start_time = time.time()
         cpu_start_time = time.process_time()
 
@@ -44,14 +41,17 @@ def measure_execution(func: Callable[..., T]) -> Callable[..., MeasurementResult
 
         elapsed_time = time.time() - start_time
         cpu_elapsed_time = time.process_time() - cpu_start_time
-        after_mem = get_memory_usage()
+        end_snapshot = tracemalloc.take_snapshot()
+        tracemalloc.stop()
+
+        memory_delta = sum(stat.size_diff for stat in end_snapshot.compare_to(start_snapshot, "lineno"))
 
         # fmt: off
         return MeasurementResult(
             result=result,
             elapsed=elapsed_time,
             cpu_elapsed=cpu_elapsed_time,
-            memory_delta=after_mem - before_mem
+            memory_delta=memory_delta
         )
 
     return wrapper
@@ -94,4 +94,4 @@ def print_read_benchmark_results(results: Dict[str, BenchmarkStats]) -> None:
 def _print_benchmark_stats(stats: BenchmarkStats) -> None:
     print(f"  Time: {stats.mean:.6f}s ± {stats.std:.6f}s (min: {stats.min:.6f}s, max: {stats.max:.6f}s)")
     print(f"  CPU Time: {stats.cpu_mean:.6f}s ± {stats.cpu_std:.6f}s")
-    print(f"  Memory Delta: {stats.memory_usage:.2f}KB")
+    print(f"  Memory Delta: {stats.memory_usage:.2f} B")

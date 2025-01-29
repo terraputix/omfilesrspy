@@ -83,6 +83,9 @@ class NetCDFReader(BaseReader):
 
     def __init__(self, filename: str):
         super().__init__(filename)
+        # disable netcdf caching: https://www.unidata.ucar.edu/software/netcdf/workshops/2012/nc4chunking/Cache.html
+        nc.set_chunk_cache(0, 0, 0)
+
         self.nc_reader = nc.Dataset(self.filename, "r")
 
     def read(self, index: BasicSelection) -> np.ndarray:
