@@ -3,7 +3,7 @@ import statistics
 import time
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Callable, List, NamedTuple, TypeVar
+from typing import Any, Callable, Dict, List, NamedTuple, TypeVar
 
 import psutil
 
@@ -30,7 +30,7 @@ class MeasurementResult(NamedTuple):
 
 def get_memory_usage():
     process = psutil.Process(os.getpid())
-    return process.memory_info().rss / 1024 / 1024  # in MB
+    return process.memory_info().rss / 1024  # Convert to KB
 
 
 def measure_execution(func: Callable[..., T]) -> Callable[..., MeasurementResult]:
@@ -46,8 +46,12 @@ def measure_execution(func: Callable[..., T]) -> Callable[..., MeasurementResult
         cpu_elapsed_time = time.process_time() - cpu_start_time
         after_mem = get_memory_usage()
 
+        # fmt: off
         return MeasurementResult(
-            result=result, elapsed=elapsed_time, cpu_elapsed=cpu_elapsed_time, memory_delta=after_mem - before_mem
+            result=result,
+            elapsed=elapsed_time,
+            cpu_elapsed=cpu_elapsed_time,
+            memory_delta=after_mem - before_mem
         )
 
     return wrapper
@@ -73,3 +77,21 @@ def run_multiple_benchmarks(func: Callable[..., MeasurementResult], iterations: 
         cpu_std=statistics.stdev(cpu_times) if len(cpu_times) > 1 else 0,
         memory_usage=statistics.mean(memory_usages),
     )
+
+
+def print_write_benchmark_results(results: Dict[str, BenchmarkStats]) -> None:
+    for fmt, result in results.items():
+        print(f"\n{fmt} Write Results:")
+        _print_benchmark_stats(result)
+
+
+def print_read_benchmark_results(results: Dict[str, BenchmarkStats]) -> None:
+    for fmt, result in results.items():
+        print(f"\n{fmt} Read Results:")
+        _print_benchmark_stats(result)
+
+
+def _print_benchmark_stats(stats: BenchmarkStats) -> None:
+    print(f"  Time: {stats.mean:.6f}s ± {stats.std:.6f}s (min: {stats.min:.6f}s, max: {stats.max:.6f}s)")
+    print(f"  CPU Time: {stats.cpu_mean:.6f}s ± {stats.cpu_std:.6f}s")
+    print(f"  Memory Delta: {stats.memory_usage:.2f}KB")
