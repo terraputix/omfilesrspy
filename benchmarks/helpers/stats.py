@@ -30,20 +30,21 @@ class MeasurementResult(NamedTuple):
 def measure_execution(func: Callable[..., T]) -> Callable[..., MeasurementResult]:
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> MeasurementResult:
-        gc.collect()
-
-        tracemalloc.start()
-        start_snapshot = tracemalloc.take_snapshot()
+        # measure time
         start_time = time.time()
         cpu_start_time = time.process_time()
-
         result = func(*args, **kwargs)
-
         elapsed_time = time.time() - start_time
         cpu_elapsed_time = time.process_time() - cpu_start_time
+
+        # measure memory
+        del result
+        gc.collect()
+        tracemalloc.start()
+        start_snapshot = tracemalloc.take_snapshot()
+        result = func(*args, **kwargs)
         end_snapshot = tracemalloc.take_snapshot()
         tracemalloc.stop()
-
         memory_delta = sum(stat.size_diff for stat in end_snapshot.compare_to(start_snapshot, "lineno"))
 
         # fmt: off
