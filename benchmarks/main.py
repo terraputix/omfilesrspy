@@ -53,8 +53,11 @@ def bm_read_all_formats(args: Namespace, data: NDArrayLike):
             sample_data = reader.read(args.read_index)  # Get sample data for verification
             read_stats = run_multiple_benchmarks(read, args.iterations)
             read_results[format_name] = ReadBenchmarkResult(read_stats=read_stats, sample_data=sample_data)
+
         except Exception as e:
             print(f"Error with {format_name}: {e}")
+        finally:
+            reader.close()
 
     print_read_benchmark_results(read_results, args.array_size)
 
