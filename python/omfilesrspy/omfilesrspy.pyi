@@ -3,19 +3,7 @@ from typing import Tuple, Union
 import numpy as np
 import numpy.typing as npt
 
-# Define types for indexing
-DimIndex = Union[
-    slice,  # e.g., :, 1:10, 1:10:2
-    int,  # e.g., 5
-    None,  # e.g., None
-    type(...),  # Ellipsis
-]
-# This represents pythons basic indexing types
-# https://numpy.org/doc/stable/user/basics.indexing.html#basic-indexing
-BasicIndexType = Union[
-    DimIndex,
-    Tuple[DimIndex, ...],  # e.g., (1, :, ..., 2:10)
-]
+from .types import BasicSelection
 
 class OmFilePyWriter:
     """A Python wrapper for the Rust OmFileWriter implementation."""
@@ -65,12 +53,12 @@ class OmFilePyWriter:
 class OmFilePyReader:
     """A Python wrapper for the Rust OmFileReader implementation."""
 
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file: Union[str, object]) -> None:
         """
-        Initialize an OmFilePyReader.
+        Initialize an OmFilePyReader from a file path or fsspec file object.
 
         Args:
-            file_path: Path to the .om file to read
+            file: Path to the .om file to read or a fsspec file object
 
         Raises:
             PyValueError: If the file cannot be opened or is invalid
@@ -120,7 +108,7 @@ class OmFilePyReader:
         """
 
     def __getitem__(
-        self, ranges: BasicIndexType
+        self, ranges: BasicSelection
     ) -> npt.NDArray[
         Union[np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64, np.float32, np.float64]
     ]:
