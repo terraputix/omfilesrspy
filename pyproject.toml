@@ -11,7 +11,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dynamic = ["version"]
-dependencies = ["numpy>=1.20.0", "fsspec>=2024.10.0", "s3fs>=2024.10.0"]
+dependencies = [
+    "numpy>=1.20.0",
+    "fsspec>=2024.10.0",
+    "s3fs>=2024.10.0",
+    "xarray>=0.19.0",
+]
 
 [tool.maturin]
 python-source = "python" # Python source code is in the `python` directory
@@ -20,3 +25,6 @@ bindings = "pyo3"        # pyo3 bindings is actually the default for maturin
 
 [project.optional-dependencies]
 dev = ["pytest>=6.0"]
+
+[project.entry-points."xarray.backends"]
+om = "omfilesrspy.xarray_backend:OmXarrayEntrypoint"

@@ -38,7 +38,7 @@ class HDF5Format(BaseFormat):
 
 class ZarrFormat(BaseFormat):
     def write(self, data: np.ndarray, chunk_size: Tuple[int, ...]) -> None:
-        zarr.save(str(self.filename), data, chunks=chunk_size)
+        zarr.save(str(self.filename), data, chunks=np.array(chunk_size))
 
     def read(self, index: BasicIndexType) -> np.ndarray:
         z = zarr.open(str(self.filename), mode="r")
