@@ -24,7 +24,7 @@ bindings = "pyo3"        # pyo3 bindings is actually the default for maturin
 # features = ["pyo3/extension-module"]
 
 [project.optional-dependencies]
-dev = ["pytest>=6.0"]
+dev = ["pytest>=6.0", "hidefix", "h5py", "netCDF4", "zarr"]
 
 [project.entry-points."xarray.backends"]
 om = "omfilesrspy.xarray_backend:OmXarrayEntrypoint"

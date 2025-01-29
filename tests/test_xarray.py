@@ -39,3 +39,30 @@ def test_om_backend_xarray_dtype():
             del data, backend_array, reader
         finally:
             os.remove(temp_file)
+
+
+def test_xarray_backend():
+    temp_file = "test_file.om"
+
+    try:
+        create_test_om_file(temp_file)
+
+        ds = xr.open_dataset(temp_file, engine="om")
+        data = ds["data"][:].values
+        del ds
+
+        assert data.shape == (5, 5)
+        assert data.dtype == np.float32
+        np.testing.assert_array_equal(
+            data,
+            [
+                [0.0, 1.0, 2.0, 3.0, 4.0],
+                [5.0, 6.0, 7.0, 8.0, 9.0],
+                [10.0, 11.0, 12.0, 13.0, 14.0],
+                [15.0, 16.0, 17.0, 18.0, 19.0],
+                [20.0, 21.0, 22.0, 23.0, 24.0],
+            ],
+        )
+
+    finally:
+        os.remove(temp_file)
