@@ -5,6 +5,7 @@ import h5py
 import netCDF4 as nc
 import numpy as np
 import omfilesrspy as om
+import xarray as xr
 import zarr
 from omfilesrspy.types import BasicSelection
 
@@ -27,6 +28,12 @@ class HDF5Reader(BaseReader):
             return dataset[index]
 
 
+class HDF5HidefixReader(BaseReader):
+    def read(self, index: BasicSelection) -> np.ndarray:
+        dataset = xr.open_dataset(self.filename, engine="hidefix")
+        return dataset["dataset"][index].values
+
+
 class ZarrReader(BaseReader):
     def read(self, index: BasicSelection) -> np.ndarray:
         z = zarr.open(str(self.filename), mode="r")
@@ -38,12 +45,10 @@ class ZarrReader(BaseReader):
         return array[index].__array__()
 
 
-
 class NetCDFReader(BaseReader):
     def read(self, index: BasicSelection) -> np.ndarray:
         with nc.Dataset(self.filename, "r") as ds:
             return ds.variables["dataset"][index]
-
 
 
 class OMReader(BaseReader):

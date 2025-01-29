@@ -1,4 +1,4 @@
-from .io.readers import BaseReader, HDF5Reader, NetCDFReader, OMReader, ZarrReader
+from .io.readers import BaseReader, HDF5HidefixReader, HDF5Reader, NetCDFReader, OMReader, ZarrReader
 from .io.writers import BaseWriter, HDF5Writer, NetCDFWriter, OMWriter, ZarrWriter
 
 
@@ -13,6 +13,7 @@ class FormatFactory:
 
     readers = {
         "h5": HDF5Reader,
+        "h5hidefix": HDF5HidefixReader,
         "zarr": ZarrReader,
         "nc": NetCDFReader,
         "om": OMReader
