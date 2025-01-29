@@ -11,24 +11,31 @@ from omfilesrspy.types import BasicSelection
 from zarr.core.buffer import NDArrayLike
 
 
-class BaseFormat(ABC):
+class BaseWriter(ABC):
     def __init__(self, filename: str):
         self.filename = Path(filename)
 
     @abstractmethod
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
-        pass
+        raise NotImplementedError("The write method must be implemented by subclasses")
+
+
+class BaseReader(ABC):
+    def __init__(self, filename: str):
+        self.filename = Path(filename)
 
     @abstractmethod
     def read(self, index: BasicSelection) -> np.ndarray:
-        pass
+        raise NotImplementedError("The read method must be implemented by subclasses")
 
 
-class HDF5Format(BaseFormat):
+class HDF5Writer(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
         with h5py.File(self.filename, "w") as f:
             f.create_dataset("dataset", data=data, chunks=chunk_size)
 
+
+class HDF5Reader(BaseReader):
     def read(self, index: BasicSelection) -> np.ndarray:
         with h5py.File(self.filename, "r") as f:
             dataset = f["dataset"]
@@ -37,10 +44,12 @@ class HDF5Format(BaseFormat):
             return dataset[index]
 
 
-class ZarrFormat(BaseFormat):
+class ZarrWriter(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
         zarr.save(str(self.filename), data, chunks=np.array(chunk_size))
 
+
+class ZarrReader(BaseReader):
     def read(self, index: BasicSelection) -> np.ndarray:
         z = zarr.open(str(self.filename), mode="r")
         if not isinstance(z, zarr.Group):
@@ -51,7 +60,7 @@ class ZarrFormat(BaseFormat):
         return array[index].__array__()
 
 
-class NetCDFFormat(BaseFormat):
+class NetCDFWriter(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
         with nc.Dataset(self.filename, "w", format="NETCDF4") as ds:
             dimension_names = tuple(f"dim{i}" for i in range(data.ndim))
@@ -61,16 +70,20 @@ class NetCDFFormat(BaseFormat):
             var = ds.createVariable("dataset", data.dtype, dimension_names, chunksizes=chunk_size)
             var[:] = data
 
+
+class NetCDFReader(BaseReader):
     def read(self, index: BasicSelection) -> np.ndarray:
         with nc.Dataset(self.filename, "r") as ds:
             return ds.variables["dataset"][index]
 
 
-class OMFormat(BaseFormat):
+class OMWriter(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
         writer = om.OmFilePyWriter(str(self.filename))
         writer.write_array(data.__array__(), chunk_size, 100, 0)
 
+
+class OMReader(BaseReader):
     def read(self, index: BasicSelection) -> np.ndarray:
         reader = om.OmFilePyReader(str(self.filename))
         return reader[index]
@@ -79,15 +92,28 @@ class OMFormat(BaseFormat):
 # Factory for creating format handlers
 class FormatFactory:
     # fmt: off
-    formats = {
-        "h5": HDF5Format,
-        "zarr": ZarrFormat,
-        "nc": NetCDFFormat,
-        "om": OMFormat
+    writers = {
+        "h5": HDF5Writer,
+        "zarr": ZarrWriter,
+        "nc": NetCDFWriter,
+        "om": OMWriter
+    }
+
+    readers = {
+        "h5": HDF5Reader,
+        "zarr": ZarrReader,
+        "nc": NetCDFReader,
+        "om": OMReader
     }
 
     @classmethod
-    def create(cls, format_name: str, filename: str) -> BaseFormat:
-        if format_name not in cls.formats:
+    def create_writer(cls, format_name: str, filename: str) -> BaseWriter:
+        if format_name not in cls.writers:
             raise ValueError(f"Unknown format: {format_name}")
-        return cls.formats[format_name](filename)
+        return cls.writers[format_name](filename)
+
+    @classmethod
+    def create_reader(cls, format_name: str, filename: str) -> BaseReader:
+        if format_name not in cls.readers:
+            raise ValueError(f"Unknown format: {format_name}")
+        return cls.readers[format_name](filename)

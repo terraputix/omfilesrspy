@@ -3,7 +3,7 @@ from typing import Tuple
 
 import numpy as np
 from helpers.args import parse_args
-from helpers.formats import BaseFormat, FormatFactory
+from helpers.formats import BaseReader, BaseWriter, FormatFactory
 from helpers.generate_data import generate_test_data
 from helpers.stats import BenchmarkStats, measure_execution, run_multiple_benchmarks
 from numpy.typing import NDArray
@@ -19,7 +19,8 @@ class FormatBenchmarkResult:
 
 
 def benchmark_format(
-    format_handler: BaseFormat,
+    writer: BaseWriter,
+    reader: BaseReader,
     data: NDArrayLike,
     chunk_size: Tuple[int, ...],
     index: BasicSelection,
@@ -28,12 +29,12 @@ def benchmark_format(
     # Measure write performance
     @measure_execution
     def write():
-        format_handler.write(data, chunk_size)
+        writer.write(data, chunk_size)
 
     # Measure read performance
     @measure_execution
     def read():
-        return format_handler.read(index)
+        return reader.read(index)
 
     write_stats = run_multiple_benchmarks(write, iterations)
     read_result = read()  # Get sample data for verification
@@ -58,10 +59,13 @@ Chunk size: {args.chunk_size}
     # Measure times
     results = {}
     for format_name in ["h5", "zarr", "nc", "om"]:
-        handler = FormatFactory.create(format_name, f"data.{format_name}")
+        writer = FormatFactory.create_writer(format_name, f"data.{format_name}")
+        reader = FormatFactory.create_reader(format_name, f"data.{format_name}")
 
         try:
-            results[format_name] = benchmark_format(handler, data, args.chunk_size, args.read_index, args.iterations)
+            results[format_name] = benchmark_format(
+                writer, reader, data, args.chunk_size, args.read_index, args.iterations
+            )
 
             # Verify data
             read_data = results[format_name].sample_data

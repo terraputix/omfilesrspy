@@ -2,7 +2,6 @@ use crate::{
     array_index::ArrayIndex, data_type::to_numpy_dtype, errors::convert_omfilesrs_error,
     fsspec_backend::FsSpecBackend,
 };
-
 use delegate::delegate;
 use num_traits::Zero;
 use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};

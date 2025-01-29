@@ -1,3 +1,4 @@
+use crate::errors::convert_omfilesrs_error;
 use numpy::{
     dtype, Element, PyArrayDescrMethods, PyArrayDyn, PyArrayMethods, PyReadonlyArrayDyn,
     PyUntypedArray, PyUntypedArrayMethods,
@@ -8,8 +9,6 @@ use omfiles_rs::{
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
 use std::fs::File;
-
-use crate::errors::convert_omfilesrs_error;
 
 #[derive(Clone)]
 pub enum PyCompressionType {
