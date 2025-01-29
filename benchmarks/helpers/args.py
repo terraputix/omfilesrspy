@@ -1,6 +1,6 @@
 import argparse
 
-from omfilesrspy.types import BasicIndexType
+from omfilesrspy.types import BasicSelection
 
 
 def parse_args():
@@ -12,7 +12,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def parse_tuple(string: str) -> BasicIndexType:
+def parse_tuple(string: str) -> BasicSelection:
     # Remove parentheses and split by comma
     items = string.strip("()").split(",")
     # Convert each item to the appropriate type

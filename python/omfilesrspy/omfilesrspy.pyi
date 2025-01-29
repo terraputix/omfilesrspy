@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import numpy as np
 import numpy.typing as npt
 
-from .types import BasicIndexType
+from .types import BasicSelection
 
 class OmFilePyWriter:
     """A Python wrapper for the Rust OmFileWriter implementation."""
@@ -108,7 +108,7 @@ class OmFilePyReader:
         """
 
     def __getitem__(
-        self, ranges: BasicIndexType
+        self, ranges: BasicSelection
     ) -> npt.NDArray[
         Union[np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64, np.float32, np.float64]
     ]:

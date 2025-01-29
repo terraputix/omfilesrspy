@@ -7,7 +7,8 @@ from helpers.formats import BaseFormat, FormatFactory
 from helpers.generate_data import generate_test_data
 from helpers.stats import BenchmarkStats, measure_execution, run_multiple_benchmarks
 from numpy.typing import NDArray
-from omfilesrspy.types import BasicIndexType
+from omfilesrspy.types import BasicSelection
+from zarr.core.buffer import NDArrayLike
 
 
 @dataclass
@@ -19,9 +20,9 @@ class FormatBenchmarkResult:
 
 def benchmark_format(
     format_handler: BaseFormat,
-    data: NDArray[np.float32],
+    data: NDArrayLike,
     chunk_size: Tuple[int, ...],
-    index: BasicIndexType,
+    index: BasicSelection,
     iterations: int,
 ) -> FormatBenchmarkResult:
     # Measure write performance
