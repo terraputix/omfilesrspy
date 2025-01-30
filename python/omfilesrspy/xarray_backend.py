@@ -64,7 +64,7 @@ class OmDataStore(WritableCFDataStore):
         shape = backend_array.reader.shape
 
         # In om-files dimensions are not named, so we just use dim0, dim1, ...
-        dim_names = [f"dim{i}" for i in range(len(shape))]
+        dim_names = [f"{k}_dim{i}" for i in range(len(shape))]
         data = indexing.LazilyIndexedArray(backend_array)
         return Variable(dims=dim_names, data=data, attrs=None, encoding=None, fastpath=True)
 
