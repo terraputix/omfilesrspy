@@ -40,12 +40,12 @@ impl OmFilePyWriter {
         slf
     }
 
-    fn __exit__(
-        &mut self,
-        _exc_type: PyObject,
-        _exc_value: PyObject,
-        _traceback: PyObject,
-    ) -> PyResult<()> {
+    /// Writes all variables and finalizes the file
+    ///
+    /// This method can be called manually if not using the context manager.
+    /// After calling this method, no more variables can be written to the file.
+    #[pyo3(text_signature = "($self)")]
+    fn close(&mut self) -> PyResult<()> {
         if let Some(root_offset_size) = self.variable_tree.write_variables(&mut self.file_writer)? {
             // Write the trailer using the root's offset size
             self.file_writer
@@ -53,6 +53,15 @@ impl OmFilePyWriter {
                 .map_err(convert_omfilesrs_error)?;
         }
         Ok(())
+    }
+
+    fn __exit__(
+        &mut self,
+        _exc_type: PyObject,
+        _exc_value: PyObject,
+        _traceback: PyObject,
+    ) -> PyResult<()> {
+        self.close()
     }
 
     #[pyo3(
@@ -145,14 +154,9 @@ impl OmFilePyWriter {
 
         if let Ok(_value) = value.extract::<String>() {
             unimplemented!("Strings are currently not implemented");
-            // self.file_writer
-            //     .write_scalar(value, key, children)
-            //     .map_err(convert_omfilesrs_error)?;
+            // self.store_scalar(name.to_string(), value, children)?;
         } else if let Ok(value) = value.extract::<f64>() {
             self.store_scalar(name.to_string(), value, children)?;
-            // self.file_writer
-            //     .write_scalar(value, name, &[])
-            //     .map_err(convert_omfilesrs_error)?;
         } else if let Ok(value) = value.extract::<f32>() {
             self.store_scalar(name.to_string(), value, children)?;
         } else if let Ok(value) = value.extract::<i64>() {
@@ -266,7 +270,6 @@ impl OmFilePyWriter {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use numpy::{ndarray::ArrayD, PyArrayDyn, PyArrayMethods};
     use omfiles_rs::{
@@ -279,7 +282,7 @@ mod tests {
     fn test_write_and_read_array() -> Result<(), Box<dyn std::error::Error>> {
         pyo3::prepare_freethreaded_python();
 
-        Python::with_gil(|py| {
+        Python::with_gil(|py| -> Result<(), Box<dyn std::error::Error>> {
             // Test parameters
             let file_path = "test_data.om";
             let dimensions = vec![10, 20];
@@ -291,36 +294,31 @@ mod tests {
 
             // Write data using context manager
             {
-                let writer = OmFilePyWriter::new(file_path).unwrap();
-                let writer_guard = writer.into_py(py);
+                let writer = OmFilePyWriter::new(file_path)?;
+                let writer_guard = writer.into_pyobject(py)?;
 
                 // Enter context
                 let writer = writer_guard
-                    .call_method0(py, "__enter__")
+                    .call_method0("__enter__")
                     .expect("Failed to enter context");
 
                 // Write data and set as root
-                writer
-                    .call_method(
-                        py,
-                        "write_array",
-                        (
-                            py_array.as_untyped(),
-                            chunks,
-                            None::<f32>,         // scale_factor
-                            None::<f32>,         // add_offset
-                            None::<String>,      // compression
-                            Some("root"),        // name
-                            None::<Vec<String>>, // children
-                        ),
-                        None,
-                    )
-                    .expect("Failed to write array");
+                writer.call_method(
+                    "write_array",
+                    (
+                        py_array.as_untyped(),
+                        chunks,
+                        None::<f32>,         // scale_factor
+                        None::<f32>,         // add_offset
+                        None::<String>,      // compression
+                        Some("root"),        // name
+                        None::<Vec<String>>, // children
+                    ),
+                    None,
+                )?;
 
                 // Exit context
-                writer_guard
-                    .call_method(py, "__exit__", (py.None(), py.None(), py.None()), None)
-                    .expect("Failed to exit context");
+                writer_guard.call_method("__exit__", (py.None(), py.None(), py.None()), None)?;
             }
 
             // Verify file exists
@@ -328,21 +326,18 @@ mod tests {
 
             // Read and verify data
             {
-                let file_for_reading = File::open(file_path).expect("Failed to open file");
-                let read_backend =
-                    MmapFile::new(file_for_reading, Mode::ReadOnly).expect("Failed to mmap file");
-                let reader =
-                    OmFileReader::new(Arc::new(read_backend)).expect("Failed to create reader");
-                let result = reader
-                    .read::<f32>(&[0..10, 0..20], None, None)
-                    .expect("Failed to read");
+                let file_for_reading = File::open(file_path)?;
+                let read_backend = MmapFile::new(file_for_reading, Mode::ReadOnly)?;
+                let reader = OmFileReader::new(Arc::new(read_backend))?;
+
+                assert_eq!(reader.get_name().unwrap(), "root");
+                let result = reader.read::<f32>(&[0..10, 0..20], None, None)?;
                 assert_eq!(result, data);
             }
 
             // Clean up
             fs::remove_file(file_path).unwrap();
-        });
-
-        Ok(())
+            Ok(())
+        })
     }
 }
