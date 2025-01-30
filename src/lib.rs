@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 mod array_index;
+mod compression;
 mod data_type;
 mod errors;
 mod fsspec_backend;
