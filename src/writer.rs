@@ -123,6 +123,62 @@ impl OmFilePyWriter {
             )))
         }
     }
+
+    #[pyo3(text_signature = "(key, value, /)")]
+    fn write_attribute(&mut self, key: &str, value: &Bound<PyAny>) -> PyResult<()> {
+        if let Ok(_value) = value.extract::<String>() {
+            unimplemented!("Strings are currently not implemented");
+            // self.file_writer
+            //     .write_scalar(value, key, children)
+            //     .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<f64>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<f32>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i64>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i32>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i16>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i8>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u64>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u32>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u16>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u8>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else {
+            return Err(PyValueError::new_err(format!(
+                    "Unsupported attribute type for key '{}'. Supported types are: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64",
+                    key
+                )));
+        }
+        Ok(())
+    }
 }
 
 impl OmFilePyWriter {
