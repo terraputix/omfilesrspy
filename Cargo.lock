@@ -316,7 +316,7 @@ dependencies = [
 [[package]]
 name = "omfiles-rs"
 version = "0.1.0"
-source = "git+https://github.com/terraputix/omfiles-rs?branch=main#b3904ff18577213de91b606c808508ab1f7eb353"
+source = "git+https://github.com/terraputix/omfiles-rs?branch=api-improvements#081151a9f3ecc9b393c2530a0864cd933a574882"
 dependencies = [
  "memmap2",
  "ndarray",

@@ -20,6 +20,14 @@ class OmFilePyWriter:
         """
         ...
 
+    def __enter__(self) -> "OmFilePyWriter":
+        """Enter the context manager."""
+        ...
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+        """Exit the context manager."""
+        ...
+
     def write_array(
         self,
         data: npt.NDArray[
@@ -47,6 +55,19 @@ class OmFilePyWriter:
         Raises:
             PyValueError: If the data type is unsupported or if parameters are invalid
             OSError: If there's an error writing to the file
+        """
+        ...
+
+    def write_attribute(self, key: str, value: Union[str, int, float, bool]) -> None:
+        """
+        Write an attribute to the .om file.
+
+        Args:
+            key: The attribute key
+            value: The attribute value
+
+        Raises:
+            ValueError: If the key is invalid
         """
         ...
 
