@@ -62,7 +62,7 @@ class OmFilePyWriter:
         """
         ...
 
-    def write_attribute(self, name: str, value: Union[str, int, float, bool], children: list[str]) -> None:
+    def write_attribute(self, name: str, value: Union[str, int, float, bool], children: list[str] = []) -> None:
         """
         Write an attribute to the .om file.
 
