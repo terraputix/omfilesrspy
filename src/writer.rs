@@ -1,4 +1,4 @@
-use crate::errors::convert_omfilesrs_error;
+use crate::{compression::PyCompressionType, errors::convert_omfilesrs_error};
 use numpy::{
     dtype, Element, PyArrayDescrMethods, PyArrayDyn, PyArrayMethods, PyReadonlyArrayDyn,
     PyUntypedArray, PyUntypedArrayMethods,
@@ -9,40 +9,6 @@ use omfiles_rs::{
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
 use std::fs::File;
-
-#[derive(Clone)]
-pub enum PyCompressionType {
-    PforDelta2dInt16,
-    FpxXor2d,
-    PforDelta2d,
-    PforDelta2dInt16Logarithmic,
-}
-
-impl PyCompressionType {
-    fn to_omfilesrs(&self) -> CompressionType {
-        match self {
-            PyCompressionType::PforDelta2dInt16 => CompressionType::PforDelta2dInt16,
-            PyCompressionType::FpxXor2d => CompressionType::FpxXor2d,
-            PyCompressionType::PforDelta2d => CompressionType::PforDelta2d,
-            PyCompressionType::PforDelta2dInt16Logarithmic => {
-                CompressionType::PforDelta2dInt16Logarithmic
-            }
-        }
-    }
-
-    fn from_str(s: &str) -> PyResult<Self> {
-        match s {
-            "pfor_delta_2d_int16" => Ok(PyCompressionType::PforDelta2dInt16),
-            "fpx_xor_2d" => Ok(PyCompressionType::FpxXor2d),
-            "pfor_delta_2d" => Ok(PyCompressionType::PforDelta2d),
-            "pfor_delta_2d_int16_logarithmic" => Ok(PyCompressionType::PforDelta2dInt16Logarithmic),
-            _ => Err(PyValueError::new_err(format!(
-                "Unsupported compression type: {}",
-                s
-            ))),
-        }
-    }
-}
 
 #[pyclass]
 pub struct OmFilePyWriter {
@@ -122,6 +88,62 @@ impl OmFilePyWriter {
                 element_type
             )))
         }
+    }
+
+    #[pyo3(text_signature = "(key, value, /)")]
+    fn write_attribute(&mut self, key: &str, value: &Bound<PyAny>) -> PyResult<()> {
+        if let Ok(_value) = value.extract::<String>() {
+            unimplemented!("Strings are currently not implemented");
+            // self.file_writer
+            //     .write_scalar(value, key, children)
+            //     .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<f64>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<f32>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i64>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i32>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i16>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<i8>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u64>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u32>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u16>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else if let Ok(value) = value.extract::<u8>() {
+            self.file_writer
+                .write_scalar(value, key, &[])
+                .map_err(convert_omfilesrs_error)?;
+        } else {
+            return Err(PyValueError::new_err(format!(
+                    "Unsupported attribute type for key '{}'. Supported types are: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64",
+                    key
+                )));
+        }
+        Ok(())
     }
 }
 
