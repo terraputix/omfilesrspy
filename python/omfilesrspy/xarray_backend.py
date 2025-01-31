@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 from xarray.backends.common import BackendArray, BackendEntrypoint, WritableCFDataStore, _normalize_path
 from xarray.backends.store import StoreBackendEntrypoint
@@ -34,28 +36,32 @@ class OmXarrayEntrypoint(BackendEntrypoint):
 
 class OmDataStore(WritableCFDataStore):
     root_variable: OmFilePyReader
-    variables_offset_store: dict[str, tuple[int, int]]
+    array_variables_offset_store: dict[str, tuple[int, int]]
+    scalar_variables_offset_store: dict[str, tuple[int, int]]
 
     def __init__(self, root_variable: OmFilePyReader):
         self.root_variable = root_variable
-        self.variables_offset_store = self._build_variables_offset_store()
-
-    def _build_variables_offset_store(self) -> dict[str, tuple[int, int]]:
-        return self.root_variable.get_flat_variable_metadata()
+        offsets_and_scalar = self.root_variable.get_flat_variable_metadata()
+        self.array_variables_offset_store = {k: (v[0], v[1]) for k, v in offsets_and_scalar.items() if v[2] is False}
+        self.scalar_variables_offset_store = {k: (v[0], v[1]) for k, v in offsets_and_scalar.items() if v[2] is True}
 
     def get_variables(self):
-        return FrozenDict((k, self.open_store_variable(k)) for k in self.variables_offset_store)
+        return FrozenDict((k, self.open_store_variable(k)) for k in self.array_variables_offset_store)
 
     def get_attrs(self):
-        # TODO: Currently no attributes are supported!
-        return FrozenDict()
+        # FIXME: For now we set all attributes as global attributes
+        scalar_values: dict[str, Any] = {}
+        for k, v in self.scalar_variables_offset_store.items():
+            reader = self.root_variable.init_from_offset_size(v[0], v[1])
+            scalar_values[k] = reader.get_scalar_value()
+        return FrozenDict(scalar_values)
 
     def open_store_variable(self, k):
-        if k not in self.variables_offset_store:
+        if k not in self.array_variables_offset_store:
             raise KeyError(f"Variable {k} not found in the store")
 
         # Create a new reader for the specific variable
-        offset, size = self.variables_offset_store[k]
+        offset, size = self.array_variables_offset_store[k]
         reader = self.root_variable.init_from_offset_size(offset, size)
         if reader is None:
             raise ValueError(f"Failed to read variable {k} at offset {offset}")
@@ -64,10 +70,8 @@ class OmDataStore(WritableCFDataStore):
         shape = backend_array.reader.shape
 
         # Get variable-specific attributes
-        try:
-            attrs = reader.get_variable_metadata(k)
-        except Exception:
-            attrs = None
+        # FIXME: For now we just set all attributes as global attributes
+        attrs = None
 
         # In om-files dimensions are not named, so we just use dim0, dim1, ...
         dim_names = [f"{k}_dim{i}" for i in range(len(shape))]

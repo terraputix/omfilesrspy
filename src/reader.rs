@@ -81,11 +81,13 @@ impl OmFilePyReader {
         })
     }
 
-    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, (u64, u64)>> {
+    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, (u64, u64, bool)>> {
         let metadata = self.reader.get_flat_variable_metadata();
         Ok(metadata
             .into_iter()
-            .map(|(key, offset_size)| (key, (offset_size.offset, offset_size.size)))
+            .map(|(key, (offset_size, is_scalar))| {
+                (key, (offset_size.offset, offset_size.size, is_scalar))
+            })
             .collect())
     }
 

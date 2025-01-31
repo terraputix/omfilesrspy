@@ -89,15 +89,25 @@ def test_write_hierarchical_file():
             writer.write_array(child2_data, chunks=[1, 1], name="child2", scale_factor=100000.0)
             # Write attributes
             writer.write_attribute("metadata1", 42.0)
-            # writer.write_attribute("metadata2", 123)
-            # writer.write_attribute("metadata3", 3.14)
-            writer.write_array(child1_data, chunks=[2, 2], name="child1", scale_factor=100000.0, children=["metadata1"])
+            writer.write_attribute("metadata2", 123)
+            writer.write_attribute("metadata3", 3.14)
+            writer.write_array(
+                child1_data,
+                chunks=[2, 2],
+                name="child1",
+                scale_factor=100000.0,
+                children=["metadata1", "metadata2", "metadata3"],
+            )
             writer.write_array(
                 root_data, chunks=[5, 5], name="root", scale_factor=100000.0, children=["child1", "child2"]
             )
 
         # Read and verify the data
         ds = xr.open_dataset(temp_file, engine="om")
+
+        assert ds.attrs["metadata1"] == 42.0
+        assert ds.attrs["metadata2"] == 123
+        assert ds.attrs["metadata3"] == 3.14
 
         # Verify root data
         # assert ds.attrs["name"] == "root"

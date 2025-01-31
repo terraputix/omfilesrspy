@@ -168,5 +168,5 @@ class OmFilePyReader:
     def init_from_offset_size(self, offset: int, size: int) -> "OmFilePyReader":
         """Initialize a new OmFilePyReader from an offset and size in an existing file."""
 
-    def get_flat_variable_metadata(self) -> dict[str, tuple[int, int]]:
+    def get_flat_variable_metadata(self) -> dict[str, tuple[int, int, bool]]:
         """Get a mapping of variable names to their file offsets and sizes."""
