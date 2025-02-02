@@ -101,11 +101,13 @@ impl OmFilePyReader {
         Ok(Self { reader, shape })
     }
 
+    #[getter]
     fn dtype(&self) -> PyResult<String> {
         Ok(to_numpy_dtype(&self.reader.data_type()).to_string())
     }
 
-    fn variable_name(&self) -> PyResult<String> {
+    #[getter]
+    fn name(&self) -> PyResult<String> {
         Ok(self.reader.get_name().unwrap_or("".to_string()))
     }
 

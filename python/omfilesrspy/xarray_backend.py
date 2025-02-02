@@ -49,7 +49,7 @@ class OmDataStore(WritableCFDataStore):
 
     def get_attrs(self):
         # Global attributes are attributes directly under the root variable.
-        return FrozenDict(self._get_attributes_for_variable(self.root_variable, self.root_variable.variable_name()))
+        return FrozenDict(self._get_attributes_for_variable(self.root_variable, self.root_variable.name))
 
     def _find_direct_children_in_store(self, path: str):
         children = {}
@@ -110,7 +110,7 @@ class OmBackendArray(BackendArray):
 
     @property
     def dtype(self):
-        return np.dtype(self.reader.dtype())
+        return np.dtype(self.reader.dtype)
 
     def __getitem__(self, key: indexing.ExplicitIndexer) -> np.typing.ArrayLike:
         return indexing.explicit_indexing_adapter(
