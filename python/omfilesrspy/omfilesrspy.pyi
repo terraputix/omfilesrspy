@@ -109,6 +109,14 @@ class OmFilePyReader:
             Numpy data type of the data
         """
 
+    def variable_name(self) -> str:
+        """
+        Get the name of the variable stored in the .om file.
+
+        Returns:
+            Name of the variable or an empty string if not available
+        """
+
     @classmethod
     def from_path(cls, path: str) -> "OmFilePyReader":
         """
@@ -164,6 +172,9 @@ class OmFilePyReader:
             PyValueError: If the requested ranges are invalid or if there's an error reading the data
         """
         ...
+
+    def get_scalar_value(self) -> Union[str, int, float, bool]:
+        """Get the scalar value of a scalar variable."""
 
     def init_from_offset_size(self, offset: int, size: int) -> "OmFilePyReader":
         """Initialize a new OmFilePyReader from an offset and size in an existing file."""
