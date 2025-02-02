@@ -10,7 +10,7 @@ use omfiles_rs::{
     core::data_types::{DataType, OmFileArrayDataType, OmFileScalarDataType},
     io::{reader::OmFileReader, writer::OmOffsetSize},
 };
-use pyo3::prelude::*;
+use pyo3::{prelude::*, BoundObject};
 use std::{collections::HashMap, sync::Arc};
 
 #[pyclass]
@@ -177,38 +177,40 @@ impl OmFilePyReader {
         return Ok(untyped_py_array);
     }
 
-    fn get_scalar_value(&self) -> PyResult<Option<PyObject>> {
-        Python::with_gil(|py| {
-            match self.reader.data_type() {
-                DataType::Int8 => self.read_scalar_value::<i8>(py),
-                DataType::Uint8 => self.read_scalar_value::<u8>(py),
-                DataType::Int16 => self.read_scalar_value::<i16>(py),
-                DataType::Uint16 => self.read_scalar_value::<u16>(py),
-                DataType::Int32 => self.read_scalar_value::<i32>(py),
-                DataType::Uint32 => self.read_scalar_value::<u32>(py),
-                DataType::Int64 => self.read_scalar_value::<i64>(py),
-                DataType::Uint64 => self.read_scalar_value::<u64>(py),
-                DataType::Float => self.read_scalar_value::<f32>(py),
-                DataType::Double => self.read_scalar_value::<f64>(py),
-                DataType::String => Ok(None), // FIXME
-                _ => Ok(None),
-            }
+    fn get_scalar_value(&self) -> PyResult<PyObject> {
+        Python::with_gil(|py| match self.reader.data_type() {
+            DataType::Int8 => self.read_scalar_value::<i8>(py),
+            DataType::Uint8 => self.read_scalar_value::<u8>(py),
+            DataType::Int16 => self.read_scalar_value::<i16>(py),
+            DataType::Uint16 => self.read_scalar_value::<u16>(py),
+            DataType::Int32 => self.read_scalar_value::<i32>(py),
+            DataType::Uint32 => self.read_scalar_value::<u32>(py),
+            DataType::Int64 => self.read_scalar_value::<i64>(py),
+            DataType::Uint64 => self.read_scalar_value::<u64>(py),
+            DataType::Float => self.read_scalar_value::<f32>(py),
+            DataType::Double => self.read_scalar_value::<f64>(py),
+            DataType::String => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "String data type is not supported",
+            )),
+            _ => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Data type is not scalar",
+            )),
         })
     }
 }
 
 impl OmFilePyReader {
-    fn read_scalar_value<T: Element + OmFileScalarDataType + IntoPy<PyObject>>(
-        &self,
-        py: Python,
-    ) -> PyResult<Option<PyObject>> {
-        let value = self.reader.read_scalar::<T>().map_or(
-            Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "Could not read scalar value",
-            )),
-            |v| Ok(v),
-        )?;
-        Ok(Some(value.into_py(py)))
+    fn read_scalar_value<'py, T>(&self, py: Python<'py>) -> PyResult<PyObject>
+    where
+        T: Element + OmFileScalarDataType + IntoPyObject<'py>,
+    {
+        let value = self.reader.read_scalar::<T>();
+
+        value
+            .into_pyobject(py)
+            .map(BoundObject::into_any)
+            .map(BoundObject::unbind)
+            .map_err(Into::into)
     }
 }
 
