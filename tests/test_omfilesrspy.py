@@ -105,37 +105,17 @@ def test_write_hierarchical_file():
         # Read and verify the data
         ds = xr.open_dataset(temp_file, engine="om")
 
-        assert ds.attrs["metadata1"] == 42.0
-        assert ds.attrs["metadata2"] == 123
-        assert ds.attrs["metadata3"] == 3.14
+        assert ds.attrs == {}  # no global attributes
+        assert ds["root/child1"].attrs == {"metadata1": 42.0, "metadata2": 123, "metadata3": 3.14}
+        assert ds["root/child2"].attrs == {}
 
-        # Verify root data
-        # assert ds.attrs["name"] == "root"
+        # Verify data
         np.testing.assert_array_almost_equal(ds["root"][:].values, root_data, decimal=4)
-
-        # Verify child1 data
-        np.testing.assert_array_almost_equal(ds["child1"][:].values, child1_data, decimal=4)
-
-        # Verify child2 data
-        np.testing.assert_array_almost_equal(ds["child2"][:].values, child2_data, decimal=4)
-
-        # Verify attributes
-        # assert ds["metadata1"].values.item() == 42.0
-        # assert ds["metadata2"].values.item() == 123
-        # assert ds["child1"].attrs["metadata3"] == 3.14
+        np.testing.assert_array_almost_equal(ds["root/child1"][:].values, child1_data, decimal=4)
+        np.testing.assert_array_almost_equal(ds["root/child2"][:].values, child2_data, decimal=4)
 
         # Verify tree structure through data variables and attrs
         assert len(ds.data_vars) == 3  # root, child1, child2
-        # assert "child1" in ds.data_vars
-        # assert "child2" in ds.data_vars
-        # assert "metadata1" in ds.data_vars
-        # assert "metadata2" in ds.data_vars
-
-        # Check child1's attributes
-        # assert "metadata3" in ds["child1"].attrs
-
-        # Check child2 has no attributes
-        # assert len(ds["child2"].attrs) == 0
 
         del ds
 
