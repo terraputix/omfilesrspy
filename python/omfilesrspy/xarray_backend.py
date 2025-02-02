@@ -34,39 +34,70 @@ class OmXarrayEntrypoint(BackendEntrypoint):
 
 class OmDataStore(WritableCFDataStore):
     root_variable: OmFilePyReader
-    variables_offset_store: dict[str, tuple[int, int]]
+    variables_store: dict[str, tuple[int, int, bool]]
 
     def __init__(self, root_variable: OmFilePyReader):
         self.root_variable = root_variable
-        self.variables_offset_store = self._build_variables_offset_store()
-
-    def _build_variables_offset_store(self) -> dict[str, tuple[int, int]]:
-        return self.root_variable.get_flat_variable_metadata()
+        self.variables_store = self.root_variable.get_flat_variable_metadata()
 
     def get_variables(self):
-        return FrozenDict((k, self.open_store_variable(k)) for k in self.variables_offset_store)
+        all_variables = {}
+        for k, v in self.variables_store.items():
+            if not v[2]:  # It's not a scalar variable
+                all_variables[k] = self.open_store_variable(k)
+        return FrozenDict(all_variables)
 
     def get_attrs(self):
-        # TODO: Currently no attributes are supported!
-        return FrozenDict()
+        # Global attributes are attributes directly under the root variable.
+        return FrozenDict(self._get_attributes_for_variable(self.root_variable, self.root_variable.variable_name()))
 
-    def open_store_variable(self, k):
-        if k not in self.variables_offset_store:
-            raise KeyError(f"Variable {k} not found in the store")
+    def _find_direct_children_in_store(self, path: str):
+        children = {}
+        for key, value in self.variables_store.items():
+            # Skip paths that don't start with the target path
+            if not key.startswith(path + "/"):
+                continue
 
-        # Create a new reader for the specific variable
-        offset, size = self.variables_offset_store[k]
+            # Split into parts after the base path
+            remaining_path = key[len(path) + 1 :]
+            parts = remaining_path.split("/")
+
+            # Only include direct children (one level deep)
+            if len(parts) == 1:
+                children[parts[0]] = value
+
+        return children
+
+    def _get_attributes_for_variable(self, reader: OmFilePyReader, path: str):
+        attrs = {}
+        direct_children = self._find_direct_children_in_store(path)
+        for k, v in direct_children.items():
+            offset, size, is_scalar = v
+            if is_scalar:
+                child_reader = reader.init_from_offset_size(offset, size)
+                if child_reader:
+                    attrs[k] = child_reader.get_scalar_value()
+        return attrs
+
+    def open_store_variable(self, path):
+        offset, size, is_scalar = self.variables_store[path]  # Get metadata from nested dict
+
+        if is_scalar:
+            raise ValueError(f"{path} is a scalar variable, not an array variable.")
+
         reader = self.root_variable.init_from_offset_size(offset, size)
         if reader is None:
-            raise ValueError(f"Failed to read variable {k} at offset {offset}")
+            raise ValueError(f"Failed to read variable {path} at offset {offset}")
 
         backend_array = OmBackendArray(reader=reader)
         shape = backend_array.reader.shape
-
         # In om-files dimensions are not named, so we just use dim0, dim1, ...
-        dim_names = [f"dim{i}" for i in range(len(shape))]
+        dim_names = [f"{path}_dim{i}" for i in range(len(shape))]
         data = indexing.LazilyIndexedArray(backend_array)
-        return Variable(dims=dim_names, data=data, attrs=None, encoding=None, fastpath=True)
+
+        attrs = self._get_attributes_for_variable(reader, path)
+
+        return Variable(dims=dim_names, data=data, attrs=attrs, encoding=None, fastpath=True)
 
 
 class OmBackendArray(BackendArray):

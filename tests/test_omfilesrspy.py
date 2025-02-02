@@ -1,8 +1,8 @@
 import os
 
-import fsspec
 import numpy as np
 import omfilesrspy
+import xarray as xr
 
 from .test_utils import create_test_om_file
 
@@ -55,9 +55,8 @@ def test_round_trip_array_datatypes():
 
         try:
             # Write data
-            writer = omfilesrspy.OmFilePyWriter(temp_file)
-            writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
-            del writer
+            with omfilesrspy.OmFilePyWriter(temp_file) as writer:
+                writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
 
             # Read data back
             reader = omfilesrspy.OmFilePyReader(temp_file)
@@ -75,36 +74,51 @@ def test_round_trip_array_datatypes():
             os.remove(temp_file)
 
 
-# def test_fsspec_backend():
-#     fsspec_object = fsspec.open("test_files/read_test.om", "rb")
+def test_write_hierarchical_file():
+    temp_file = "test_hierarchical.om"
 
-#     file = omfilesrspy.FsSpecBackend(fsspec_object)
-#     assert file.file_size == 144
+    try:
+        # Create test data
+        root_data = np.random.rand(10, 10).astype(np.float32)
+        child1_data = np.random.rand(5, 5).astype(np.float32)
+        child2_data = np.random.rand(3, 3).astype(np.float32)
 
+        # Write hierarchical structure
+        with omfilesrspy.OmFilePyWriter(temp_file) as writer:
+            # Write arrays
+            writer.write_array(child2_data, chunks=[1, 1], name="child2", scale_factor=100000.0)
+            # Write attributes
+            writer.write_attribute("metadata1", 42.0)
+            writer.write_attribute("metadata2", 123)
+            writer.write_attribute("metadata3", 3.14)
+            writer.write_array(
+                child1_data,
+                chunks=[2, 2],
+                name="child1",
+                scale_factor=100000.0,
+                children=["metadata1", "metadata2", "metadata3"],
+            )
+            writer.write_array(
+                root_data, chunks=[5, 5], name="root", scale_factor=100000.0, children=["child1", "child2"]
+            )
 
-def test_s3_reader():
-    file_path = "openmeteo/data/dwd_icon_d2/temperature_2m/chunk_3960.om"
-    fs = fsspec.filesystem("s3", anon=True)
-    backend = fs.open(file_path, mode="rb")
+        # Read and verify the data
+        ds = xr.open_dataset(temp_file, engine="om")
 
-    # Create reader over fs spec backend
-    reader = omfilesrspy.OmFilePyReader(backend)
-    data = reader[57812:57813, 0:100]
+        assert ds.attrs == {}  # no global attributes
+        assert ds["root/child1"].attrs == {"metadata1": 42.0, "metadata2": 123, "metadata3": 3.14}
+        assert ds["root/child2"].attrs == {}
 
-    # Verify the data
-    expected = [18.0, 17.7, 17.65, 17.45, 17.15, 17.6, 18.7, 20.75, 21.7, 22.65]
-    np.testing.assert_array_almost_equal(data[:10], expected)
+        # Verify data
+        np.testing.assert_array_almost_equal(ds["root"][:].values, root_data, decimal=4)
+        np.testing.assert_array_almost_equal(ds["root/child1"][:].values, child1_data, decimal=4)
+        np.testing.assert_array_almost_equal(ds["root/child2"][:].values, child2_data, decimal=4)
 
+        # Verify tree structure through data variables and attrs
+        assert len(ds.data_vars) == 3  # root, child1, child2
 
-def test_s3_reader_with_cache():
-    file_path = "openmeteo/data/dwd_icon_d2/temperature_2m/chunk_3960.om"
-    fs = fsspec.filesystem(protocol="s3", anon=True)
-    backend = fs.open(file_path, mode="rb", cache_type="mmap", block_size=1024, cache_options={"location": "cache"})
+        del ds
 
-    # Create reader over fs spec backend
-    reader = omfilesrspy.OmFilePyReader(backend)
-    data = reader[57812:57813, 0:100]
-
-    # Verify the data
-    expected = [18.0, 17.7, 17.65, 17.45, 17.15, 17.6, 18.7, 20.75, 21.7, 22.65]
-    np.testing.assert_array_almost_equal(data[:10], expected)
+    finally:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)

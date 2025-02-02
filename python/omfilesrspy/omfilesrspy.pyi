@@ -20,6 +20,14 @@ class OmFilePyWriter:
         """
         ...
 
+    def __enter__(self) -> "OmFilePyWriter":
+        """Enter the context manager."""
+        ...
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+        """Exit the context manager."""
+        ...
+
     def write_array(
         self,
         data: npt.NDArray[
@@ -31,6 +39,8 @@ class OmFilePyWriter:
         scale_factor: float = 1.0,
         add_offset: float = 0.0,
         compression: str = "pfor_delta_2d",
+        name: str = "data",
+        children: list[str] = [],
     ) -> None:
         """
         Write a numpy array to the .om file with specified chunking and scaling parameters.
@@ -43,10 +53,26 @@ class OmFilePyWriter:
             add_offset: Offset value for data compression (default: 0.0)
             compression: Compression algorithm to use (default: "pfor_delta_2d")
                        Supported values: "pfor_delta_2d", "fpx_xor_2d", "pfor_delta_2d_int16", "pfor_delta_2d_int16_logarithmic"
+            name: Name of the variable to be written (default: "data")
+            children: List of names of child variables (default: [])
 
         Raises:
             PyValueError: If the data type is unsupported or if parameters are invalid
             OSError: If there's an error writing to the file
+        """
+        ...
+
+    def write_attribute(self, name: str, value: Union[str, int, float, bool], children: list[str] = []) -> None:
+        """
+        Write an attribute to the .om file.
+
+        Args:
+            name: The attribute name
+            value: The attribute value
+            children: List of names of child attributes
+
+        Raises:
+            ValueError: If the key is invalid
         """
         ...
 
@@ -142,5 +168,5 @@ class OmFilePyReader:
     def init_from_offset_size(self, offset: int, size: int) -> "OmFilePyReader":
         """Initialize a new OmFilePyReader from an offset and size in an existing file."""
 
-    def get_flat_variable_metadata(self) -> dict[str, tuple[int, int]]:
+    def get_flat_variable_metadata(self) -> dict[str, tuple[int, int, bool]]:
         """Get a mapping of variable names to their file offsets and sizes."""

@@ -6,6 +6,7 @@ mod errors;
 mod fsspec_backend;
 mod reader;
 mod test_utils;
+mod variable_tree;
 mod writer;
 
 /// A Python module implemented in Rust.
