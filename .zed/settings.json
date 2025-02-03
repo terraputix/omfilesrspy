@@ -1,5 +1,12 @@
 {
   "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "cargo": {
+          "features": ["all"]
+        }
+      }
+    },
     "pyright": {
       "settings": {
         "python.analysis": {
@@ -25,7 +32,7 @@
   },
   "languages": {
     "Python": {
-      "language_servers": ["ruff", "pyright"],
+      "language_servers": ["pyright", "ruff"],
       "format_on_save": "on",
       "formatter": [
         {
@@ -33,11 +40,6 @@
             "source.organizeImports.ruff": true,
             // Fix all auto-fixable problems
             "source.fixAll.ruff": true
-          }
-        },
-        {
-          "language_server": {
-            "name": "ruff"
           }
         }
       ]

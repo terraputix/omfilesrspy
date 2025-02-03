@@ -1,4 +1,4 @@
-use omfiles_rs::core::data_types::DataType;
+use crate::core::data_types::DataType;
 
 pub fn to_numpy_dtype(dtype: &DataType) -> &str {
     match dtype {

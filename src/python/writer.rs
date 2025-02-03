@@ -1,11 +1,11 @@
-use crate::errors::convert_omfilesrs_error;
+use crate::python::errors::convert_omfilesrs_error;
+use crate::{
+    core::compression::CompressionType, core::data_types::OmFileArrayDataType,
+    io::writer::OmFileWriter,
+};
 use numpy::{
     dtype, Element, PyArrayDescrMethods, PyArrayDyn, PyArrayMethods, PyReadonlyArrayDyn,
     PyUntypedArray, PyUntypedArrayMethods,
-};
-use omfiles_rs::{
-    core::compression::CompressionType, core::data_types::OmFileArrayDataType,
-    io::writer::OmFileWriter,
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
 use std::fs::File;
@@ -156,7 +156,7 @@ impl OmFilePyWriter {
         let variable_meta = writer.finalize();
         let variable = self
             .file_writer
-            .write_array(variable_meta, name, &[])
+            .write_array(&variable_meta, name, &[])
             .map_err(convert_omfilesrs_error)?;
         self.file_writer
             .write_trailer(variable)

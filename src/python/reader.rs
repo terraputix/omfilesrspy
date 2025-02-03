@@ -1,15 +1,15 @@
-use crate::{
+use crate::python::{
     array_index::ArrayIndex, data_type::to_numpy_dtype, errors::convert_omfilesrs_error,
     fsspec_backend::FsSpecBackend,
 };
-use delegate::delegate;
-use num_traits::Zero;
-use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
-use omfiles_rs::{
+use crate::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
     core::data_types::OmFileArrayDataType,
     io::{reader::OmFileReader, writer::OmOffsetSize},
 };
+use delegate::delegate;
+use num_traits::Zero;
+use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
 use pyo3::prelude::*;
 use std::{collections::HashMap, sync::Arc};
 
@@ -47,7 +47,7 @@ impl OmFilePyReader {
 
     #[staticmethod]
     fn from_path(file_path: &str) -> PyResult<Self> {
-        use omfiles_rs::backend::mmapfile::Mode;
+        use crate::backend::mmapfile::Mode;
         use std::fs::File;
 
         let file_handle = File::open(file_path)
@@ -81,11 +81,13 @@ impl OmFilePyReader {
         })
     }
 
-    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, (u64, u64)>> {
+    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, (u64, u64, bool)>> {
         let metadata = self.reader.get_flat_variable_metadata();
         Ok(metadata
             .into_iter()
-            .map(|(key, offset_size)| (key, (offset_size.offset, offset_size.size)))
+            .map(|(key, (offset_size, is_scalar))| {
+                (key, (offset_size.offset, offset_size.size, is_scalar))
+            })
             .collect())
     }
 
@@ -121,49 +123,49 @@ impl OmFilePyReader {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Scalar data types are not supported");
 
         let untyped_py_array_or_error = match dtype {
-            omfiles_rs::core::data_types::DataType::None => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int8 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint8 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int16 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint16 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int32 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint32 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int64 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint64 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Float => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Double => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::String => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int8Array => {
+            crate::core::data_types::DataType::None => Err(scalar_error),
+            crate::core::data_types::DataType::Int8 => Err(scalar_error),
+            crate::core::data_types::DataType::Uint8 => Err(scalar_error),
+            crate::core::data_types::DataType::Int16 => Err(scalar_error),
+            crate::core::data_types::DataType::Uint16 => Err(scalar_error),
+            crate::core::data_types::DataType::Int32 => Err(scalar_error),
+            crate::core::data_types::DataType::Uint32 => Err(scalar_error),
+            crate::core::data_types::DataType::Int64 => Err(scalar_error),
+            crate::core::data_types::DataType::Uint64 => Err(scalar_error),
+            crate::core::data_types::DataType::Float => Err(scalar_error),
+            crate::core::data_types::DataType::Double => Err(scalar_error),
+            crate::core::data_types::DataType::String => Err(scalar_error),
+            crate::core::data_types::DataType::Int8Array => {
                 read_untyped_array::<i8>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::Uint8Array => {
+            crate::core::data_types::DataType::Uint8Array => {
                 read_untyped_array::<u8>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::Int16Array => {
+            crate::core::data_types::DataType::Int16Array => {
                 read_untyped_array::<i16>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::Uint16Array => {
+            crate::core::data_types::DataType::Uint16Array => {
                 read_untyped_array::<u16>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::Int32Array => {
+            crate::core::data_types::DataType::Int32Array => {
                 read_untyped_array::<i32>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::Uint32Array => {
+            crate::core::data_types::DataType::Uint32Array => {
                 read_untyped_array::<u32>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::Int64Array => {
+            crate::core::data_types::DataType::Int64Array => {
                 read_untyped_array::<i64>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::Uint64Array => {
+            crate::core::data_types::DataType::Uint64Array => {
                 read_untyped_array::<u64>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::FloatArray => {
+            crate::core::data_types::DataType::FloatArray => {
                 read_untyped_array::<f32>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::DoubleArray => {
+            crate::core::data_types::DataType::DoubleArray => {
                 read_untyped_array::<f64>(&reader, read_ranges, py)
             }
-            omfiles_rs::core::data_types::DataType::StringArray => {
+            crate::core::data_types::DataType::StringArray => {
                 unimplemented!("String arrays are currently not implemented")
             }
         };
@@ -202,9 +204,9 @@ impl OmFileReaderBackend for BackendImpl {
             fn count(&self) -> usize;
             fn needs_prefetch(&self) -> bool;
             fn prefetch_data(&self, offset: usize, count: usize);
-            fn pre_read(&self, offset: usize, count: usize) -> Result<(), omfiles_rs::errors::OmFilesRsError>;
-            fn get_bytes(&self, offset: u64, count: u64) -> Result<&[u8], omfiles_rs::errors::OmFilesRsError>;
-            fn get_bytes_owned(&self, offset: u64, count: u64) -> Result<Vec<u8>, omfiles_rs::errors::OmFilesRsError>;
+            fn pre_read(&self, offset: usize, count: usize) -> Result<(), crate::errors::OmFilesRsError>;
+            fn get_bytes(&self, offset: u64, count: u64) -> Result<&[u8], crate::errors::OmFilesRsError>;
+            fn get_bytes_owned(&self, offset: u64, count: u64) -> Result<Vec<u8>, crate::errors::OmFilesRsError>;
         }
     }
 }
@@ -212,8 +214,8 @@ impl OmFileReaderBackend for BackendImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::array_index::IndexType;
     use crate::create_test_binary_file;
+    use crate::python::array_index::IndexType;
     use numpy::{PyArrayDyn, PyArrayMethods, PyUntypedArrayMethods};
 
     #[test]

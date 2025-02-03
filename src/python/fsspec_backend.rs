@@ -1,4 +1,4 @@
-use omfiles_rs::backend::backends::OmFileReaderBackend;
+use crate::backend::backends::OmFileReaderBackend;
 use pyo3::prelude::*;
 use pyo3::Python;
 use std::error::Error;
@@ -37,11 +37,7 @@ impl OmFileReaderBackend for FsSpecBackend {
         // No-op for now
     }
 
-    fn pre_read(
-        &self,
-        _offset: usize,
-        _count: usize,
-    ) -> Result<(), omfiles_rs::errors::OmFilesRsError> {
+    fn pre_read(&self, _offset: usize, _count: usize) -> Result<(), crate::errors::OmFilesRsError> {
         Ok(())
     }
 
@@ -49,7 +45,7 @@ impl OmFileReaderBackend for FsSpecBackend {
         &self,
         offset: u64,
         count: u64,
-    ) -> Result<Vec<u8>, omfiles_rs::errors::OmFilesRsError> {
+    ) -> Result<Vec<u8>, crate::errors::OmFilesRsError> {
         let bytes = Python::with_gil(|py| -> Result<Vec<u8>, Box<dyn Error>> {
             // Seek to offset
             self.py_file.call_method1(py, "seek", (offset,))?;
@@ -61,7 +57,7 @@ impl OmFileReaderBackend for FsSpecBackend {
             Ok(py_bytes)
         })
         // FIXME: error type
-        .map_err(|e| omfiles_rs::errors::OmFilesRsError::DecoderError(e.to_string()))?;
+        .map_err(|e| crate::errors::OmFilesRsError::DecoderError(e.to_string()))?;
 
         Ok(bytes)
     }

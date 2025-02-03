@@ -314,24 +314,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "omfiles-rs"
-version = "0.1.0"
-source = "git+https://github.com/terraputix/omfiles-rs?branch=main#b3904ff18577213de91b606c808508ab1f7eb353"
-dependencies = [
- "memmap2",
- "ndarray",
- "num-traits",
- "om-file-format-sys",
-]
-
-[[package]]
 name = "omfilesrspy"
 version = "0.1.0"
 dependencies = [
  "delegate",
+ "memmap2",
+ "ndarray",
  "num-traits",
  "numpy",
- "omfiles-rs",
+ "om-file-format-sys",
  "pyo3",
 ]
 

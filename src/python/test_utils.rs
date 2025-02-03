@@ -23,7 +23,7 @@ mod utils {
     #[macro_export]
     macro_rules! create_test_binary_file {
         ($filename:expr) => {
-            crate::test_utils::create_binary_file(
+            crate::python::test_utils::create_binary_file(
                 $filename,
                 &[
                     79, 77, 3, 0, 4, 130, 0, 2, 3, 34, 0, 4, 194, 2, 10, 4, 178, 0, 12, 4, 242, 0,
