@@ -77,7 +77,34 @@ class OmFilePyWriter:
         ...
 
 class OmFilePyReader:
-    """A Python wrapper for the Rust OmFileReader implementation."""
+    """
+    An OmFilePyReader class for reading .om files.
+
+    A reader object can have an arbitrary number of child readers, each representing
+    a multidimensional variable or a scalar variable (an attribute). Thus, this class
+    implements a tree-like structure for multi-dimensional data access.
+
+    Variables in OM-Files do not have named dimensions! That means you have to know
+    what the dimensions represent in advance or you need to explicitly encode them as
+    some kind of attribute.
+
+    Most likely we will adopt the xarray convention which is implemented for zarr
+    which requires multi-dimensional variables to have an attribute called
+    _ARRAY_DIMENSIONS that contains a list of dimension names.
+    These dimension names should be encoded somewhere in the .om file hierarchy
+    as attributes.
+
+    Therefore, it might be useful to differentiate in some way between
+    hdf5-like groups and datasets/n-dim arrays in an om-file.
+
+    Group: Can contain datasets/arrays, attributes, and other groups.
+    Dataset: Data-array, might have associated attributes.
+    Attribute: A named data value associated with a group or dataset.
+
+    E.g. in netcdf4 the dimensions are special datasets that are associated with
+    a group. Each additional dataset that is not a dimension is a variable and
+    needs to have dimensions associated with it which belong to the group.
+    """
 
     def __init__(self, file: Union[str, object]) -> None:
         """
@@ -149,7 +176,7 @@ class OmFilePyReader:
         Union[np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32, np.int64, np.uint64, np.float32, np.float64]
     ]:
         """
-        Read data from the .om file using numpy-style indexing.
+        Read data from the open variable.om file using numpy-style indexing.
         Currently only slices with step 1 are supported.
 
         The returned array will have singleton dimensions removed (squeezed).
