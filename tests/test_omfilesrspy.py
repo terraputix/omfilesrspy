@@ -74,3 +74,100 @@ def test_round_trip_array_datatypes():
         finally:
             # Always try to remove the temp file
             os.remove(temp_file)
+
+def test_write_hierarchical_file():
+    temp_file = "test_hierarchical.om"
+
+    try:
+        # Create test data
+        root_data = np.random.rand(10, 10).astype(np.float32)
+        child1_data = np.random.rand(5, 5).astype(np.float32)
+        child2_data = np.random.rand(3, 3).astype(np.float32)
+
+        # Write hierarchical structure
+        writer = omfilesrspy.OmFilePyWriter(temp_file)
+
+        # Write child2 array
+        child2_var = writer.write_array(
+            child2_data,
+            chunks=[1, 1],
+            name="child2",
+            scale_factor=100000.0
+        )
+
+        # Write attributes and get their variables
+        meta1_var = writer.write_scalar("metadata1", 42.0)
+        meta2_var = writer.write_scalar("metadata2", 123)
+        meta3_var = writer.write_scalar("metadata3", 3.14)
+
+        # Write child1 array with attribute children
+        child1_var = writer.write_array(
+            child1_data,
+            chunks=[2, 2],
+            name="child1",
+            scale_factor=100000.0,
+            children=[meta1_var, meta2_var, meta3_var]
+        )
+
+        # Write root array with children
+        root_var = writer.write_array(
+            root_data,
+            chunks=[5, 5],
+            name="root",
+            scale_factor=100000.0,
+            children=[child1_var, child2_var]
+        )
+
+        # Finalize the file
+        writer.close(root_var)
+        del writer
+
+        # Read and verify the data using OmFilePyReader
+        reader = omfilesrspy.OmFilePyReader(temp_file)
+
+        # Verify root data
+        read_root = reader[:]
+        np.testing.assert_array_almost_equal(read_root, root_data, decimal=4)
+        assert read_root.shape == (10, 10)
+        assert read_root.dtype == np.float32
+
+        # Get child readers
+        child_metadata = reader.get_flat_variable_metadata()
+
+        # Verify child1 data
+        child1_reader = reader.init_from_offset_size(
+            child_metadata["child1"][0],
+            child_metadata["child1"][1]
+        )
+        read_child1 = child1_reader[:]
+        np.testing.assert_array_almost_equal(read_child1, child1_data, decimal=4)
+        assert read_child1.shape == (5, 5)
+        assert read_child1.dtype == np.float32
+
+        # Verify child2 data
+        child2_reader = reader.init_from_offset_size(
+            child_metadata["child2"][0],
+            child_metadata["child2"][1]
+        )
+        read_child2 = child2_reader[:]
+        np.testing.assert_array_almost_equal(read_child2, child2_data, decimal=4)
+        assert read_child2.shape == (3, 3)
+        assert read_child2.dtype == np.float32
+
+        # Verify metadata attributes
+        metadata_reader = reader.init_from_offset_size(
+            child_metadata["metadata1"][0],
+            child_metadata["metadata1"][1]
+        )
+
+        metadata = metadata_reader.get_scalar()
+        assert metadata == 42.0
+
+        del reader
+        del child1_reader
+        del child2_reader
+        del metadata_reader
+
+    finally:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)

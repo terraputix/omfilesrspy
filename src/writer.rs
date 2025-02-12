@@ -125,7 +125,7 @@ impl OmFilePyWriter {
         text_signature = "(key, value, children=None)",
         signature = (key, value, children=None)
     )]
-    fn write_attribute(
+    fn write_scalar(
         &mut self,
         key: &str,
         value: &Bound<PyAny>,

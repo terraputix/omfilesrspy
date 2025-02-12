@@ -74,7 +74,7 @@ class OmFilePyWriter:
         """
         ...
 
-    def write_attribute(
+    def write_scalar(
             self,
             key: str,
             value: Union[str, int, float, bool],
@@ -204,6 +204,10 @@ class OmFilePyReader:
         Raises:
             PyValueError: If the requested ranges are invalid or if there's an error reading the data
         """
+        ...
+
+    def get_scalar(self) -> Union[str, int, float, bool]:
+        """Get the scalar value of the variable."""
         ...
 
     def init_from_offset_size(self, offset: int, size: int) -> "OmFilePyReader":
