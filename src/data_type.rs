@@ -16,7 +16,7 @@ enum ScalarOrArray {
 impl ScalarOrArray {
     fn from_dtype(dtype: &DataType) -> Self {
         match dtype {
-            DataType::None => unimplemented!("todo None dtypes"),
+            DataType::None => unimplemented!("todo None type"),
             DataType::Int8 => ScalarOrArray::Scalar("int8".to_string()),
             DataType::Uint8 => ScalarOrArray::Scalar("uint8".to_string()),
             DataType::Int16 => ScalarOrArray::Scalar("int16".to_string()),
@@ -38,7 +38,7 @@ impl ScalarOrArray {
             DataType::Uint64Array => ScalarOrArray::Array("uint64".to_string()),
             DataType::FloatArray => ScalarOrArray::Array("float32".to_string()),
             DataType::DoubleArray => ScalarOrArray::Array("float64".to_string()),
-            DataType::StringArray => unimplemented!("todo string"),
+            DataType::StringArray => unimplemented!("todo string array type"),
         }
     }
 }
