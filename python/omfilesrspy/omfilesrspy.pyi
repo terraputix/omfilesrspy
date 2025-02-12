@@ -102,12 +102,21 @@ class OmFilePyReader:
         """
         ...
 
+    @property
     def dtype(self) -> np.dtype:
         """
         Get the data type of the data stored in the .om file.
 
         Returns:
             Numpy data type of the data
+        """
+
+    @property
+    def name(self) -> str:
+        """
+        Get the name of the variable stored in the .om file.
+        Returns:
+            Name of the variable or an empty string if not available
         """
 
     @classmethod
