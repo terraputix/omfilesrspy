@@ -73,7 +73,6 @@ def test_round_trip_array_datatypes():
             # Always try to remove the temp file
             os.remove(temp_file)
 
-
 def test_write_hierarchical_file():
     temp_file = "test_hierarchical.om"
 
