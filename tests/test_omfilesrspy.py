@@ -55,7 +55,9 @@ def test_round_trip_array_datatypes():
         try:
             # Write data
             writer = omfilesrspy.OmFilePyWriter(temp_file)
-            writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
+            variable = writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
+            writer.close(variable)
+
             del writer
 
             # Read data back

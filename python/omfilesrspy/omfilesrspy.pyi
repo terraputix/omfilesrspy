@@ -5,6 +5,12 @@ import numpy.typing as npt
 
 from .types import BasicSelection
 
+class OmVariable:
+    """Represents a variable in an OM file."""
+    name: str
+    offset: int
+    size: int
+
 class OmFilePyWriter:
     """A Python wrapper for the Rust OmFileWriter implementation."""
 
@@ -20,6 +26,20 @@ class OmFilePyWriter:
         """
         ...
 
+    def close(self, root_variable: OmVariable) -> None:
+            """
+            Finalize and close the .om file by writing the trailer with the root variable.
+
+            Args:
+                root_variable: The OmVariable that represents the root node of the variable tree.
+                                This variable's offset and size will be used to write the trailer.
+
+            Raises:
+                PyValueError: If there's an error writing the trailer
+                OSError: If there's an error writing to the file
+            """
+            ...
+
     def write_array(
         self,
         data: npt.NDArray[
@@ -31,7 +51,9 @@ class OmFilePyWriter:
         scale_factor: float = 1.0,
         add_offset: float = 0.0,
         compression: str = "pfor_delta_2d",
-    ) -> None:
+        name: str = "data",
+        children: list[OmVariable] | None = None,
+    ) -> OmVariable:
         """
         Write a numpy array to the .om file with specified chunking and scaling parameters.
 
@@ -43,12 +65,21 @@ class OmFilePyWriter:
             add_offset: Offset value for data compression (default: 0.0)
             compression: Compression algorithm to use (default: "pfor_delta_2d")
                        Supported values: "pfor_delta_2d", "fpx_xor_2d", "pfor_delta_2d_int16", "pfor_delta_2d_int16_logarithmic"
+            name: Name of the variable to be written (default: "data")
+            children: List of child variables (default: [])
 
         Raises:
             PyValueError: If the data type is unsupported or if parameters are invalid
             OSError: If there's an error writing to the file
         """
         ...
+
+    def write_attribute(
+            self,
+            key: str,
+            value: Union[str, int, float, bool],
+            children: list[OmVariable] | None = None,
+        ) -> OmVariable: ...
 
 class OmFilePyReader:
     """

@@ -4,6 +4,7 @@ mod compression;
 mod data_type;
 mod errors;
 mod fsspec_backend;
+mod hierarchy;
 mod reader;
 mod test_utils;
 mod writer;
