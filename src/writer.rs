@@ -138,7 +138,9 @@ impl OmFilePyWriter {
             .collect();
 
         let result = if let Ok(_value) = value.extract::<String>() {
-            unimplemented!("Strings are currently not implemented");
+            return Err(PyValueError::new_err(
+                "Strings are currently not supported.",
+            ));
         } else if let Ok(value) = value.extract::<f64>() {
             self.store_scalar(value, key, &children)?
         } else if let Ok(value) = value.extract::<f32>() {

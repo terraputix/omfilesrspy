@@ -154,9 +154,9 @@ impl OmFilePyReader {
             DataType::Uint64Array => read_untyped_array::<u64>(&reader, read_ranges, py),
             DataType::FloatArray => read_untyped_array::<f32>(&reader, read_ranges, py),
             DataType::DoubleArray => read_untyped_array::<f64>(&reader, read_ranges, py),
-            DataType::StringArray => {
-                unimplemented!("String arrays are currently not implemented")
-            }
+            DataType::StringArray => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "String Arrays not currently supported",
+            )),
         };
 
         let untyped_py_array = untyped_py_array_or_error?;
