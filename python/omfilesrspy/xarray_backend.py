@@ -5,7 +5,7 @@ from xarray.core import indexing
 from xarray.core.utils import FrozenDict
 from xarray.core.variable import Variable
 
-from .omfilesrspy import OmFilePyReader
+from .omfilesrspy import OmFilePyReader, OmVariable
 
 
 class OmXarrayEntrypoint(BackendEntrypoint):
@@ -34,13 +34,13 @@ class OmXarrayEntrypoint(BackendEntrypoint):
 
 class OmDataStore(WritableCFDataStore):
     root_variable: OmFilePyReader
-    variables_offset_store: dict[str, tuple[int, int]]
+    variables_offset_store: dict[str, OmVariable]
 
     def __init__(self, root_variable: OmFilePyReader):
         self.root_variable = root_variable
         self.variables_offset_store = self._build_variables_offset_store()
 
-    def _build_variables_offset_store(self) -> dict[str, tuple[int, int]]:
+    def _build_variables_offset_store(self) -> dict[str, OmVariable]:
         return self.root_variable.get_flat_variable_metadata()
 
     def get_variables(self):
@@ -55,10 +55,10 @@ class OmDataStore(WritableCFDataStore):
             raise KeyError(f"Variable {k} not found in the store")
 
         # Create a new reader for the specific variable
-        offset, size = self.variables_offset_store[k]
-        reader = self.root_variable.init_from_offset_size(offset, size)
+        variable = self.variables_offset_store[k]
+        reader = self.root_variable.init_from_variable(variable)
         if reader is None:
-            raise ValueError(f"Failed to read variable {k} at offset {offset}")
+            raise ValueError(f"Failed to read variable {k} at offset {variable.offset}")
 
         backend_array = OmBackendArray(reader=reader)
         shape = backend_array.reader.shape

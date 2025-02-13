@@ -1,6 +1,6 @@
 use crate::{
     array_index::ArrayIndex, data_type::to_numpy_dtype, errors::convert_omfilesrs_error,
-    fsspec_backend::FsSpecBackend,
+    fsspec_backend::FsSpecBackend, hierarchy::OmVariable,
 };
 use delegate::delegate;
 use num_traits::Zero;
@@ -8,7 +8,7 @@ use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
 use omfiles_rs::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
     core::data_types::{DataType, OmFileArrayDataType, OmFileScalarDataType},
-    io::{reader::OmFileReader, writer::OmOffsetSize},
+    io::reader::OmFileReader,
 };
 use pyo3::{prelude::*, BoundObject};
 use std::{collections::HashMap, sync::Arc};
@@ -81,18 +81,27 @@ impl OmFilePyReader {
         })
     }
 
-    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, (u64, u64)>> {
+    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, OmVariable>> {
         let metadata = self.reader.get_flat_variable_metadata();
         Ok(metadata
             .into_iter()
-            .map(|(key, offset_size)| (key, (offset_size.offset, offset_size.size)))
+            .map(|(key, offset_size)| {
+                (
+                    key.clone(),
+                    OmVariable {
+                        name: key,
+                        offset: offset_size.offset,
+                        size: offset_size.size,
+                    },
+                )
+            })
             .collect())
     }
 
-    fn init_from_offset_size(&self, offset: u64, size: u64) -> PyResult<Self> {
+    fn init_from_variable(&self, variable: OmVariable) -> PyResult<Self> {
         let reader = self
             .reader
-            .init_child_from_offset_size(OmOffsetSize::new(offset, size))
+            .init_child_from_offset_size(variable.into())
             .map_err(convert_omfilesrs_error)?;
 
         let shape = reader.get_dimensions().to_vec();

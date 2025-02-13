@@ -210,8 +210,8 @@ class OmFilePyReader:
         """Get the scalar value of the variable."""
         ...
 
-    def init_from_offset_size(self, offset: int, size: int) -> "OmFilePyReader":
-        """Initialize a new OmFilePyReader from an offset and size in an existing file."""
+    def init_from_variable(self, variable: OmVariable) -> "OmFilePyReader":
+        """Initialize a new OmFilePyReader from a child variable."""
 
-    def get_flat_variable_metadata(self) -> dict[str, tuple[int, int]]:
+    def get_flat_variable_metadata(self) -> dict[str, OmVariable]:
         """Get a mapping of variable names to their file offsets and sizes."""
