@@ -1,29 +1,25 @@
+use numpy::{dtype, PyArrayDescr};
 use omfiles_rs::core::data_types::DataType;
+use pyo3::{exceptions::PyTypeError, Bound, PyResult, Python};
 
-pub fn to_numpy_dtype(dtype: &DataType) -> &str {
-    match dtype {
-        DataType::None => unimplemented!("todo scalar dtypes"),
-        DataType::Int8 => unimplemented!("todo scalar dtypes"),
-        DataType::Uint8 => unimplemented!("todo scalar dtypes"),
-        DataType::Int16 => unimplemented!("todo scalar dtypes"),
-        DataType::Uint16 => unimplemented!("todo scalar dtypes"),
-        DataType::Int32 => unimplemented!("todo scalar dtypes"),
-        DataType::Uint32 => unimplemented!("todo scalar dtypes"),
-        DataType::Int64 => unimplemented!("todo scalar dtypes"),
-        DataType::Uint64 => unimplemented!("todo scalar dtypes"),
-        DataType::Float => unimplemented!("todo scalar dtypes"),
-        DataType::Double => unimplemented!("todo scalar dtypes"),
-        DataType::String => unimplemented!("todo scalar dtypes"),
-        DataType::Int8Array => "int8",
-        DataType::Uint8Array => "uint8",
-        DataType::Int16Array => "int16",
-        DataType::Uint16Array => "uint16",
-        DataType::Int32Array => "int32",
-        DataType::Uint32Array => "uint32",
-        DataType::Int64Array => "int64",
-        DataType::Uint64Array => "uint64",
-        DataType::FloatArray => "float32",
-        DataType::DoubleArray => "float64",
-        DataType::StringArray => unimplemented!("todo string"),
+/// Get NumPy dtype, only for numeric types
+pub fn get_numpy_dtype<'py>(
+    py: Python<'py>,
+    type_enum: &DataType,
+) -> PyResult<Bound<'py, PyArrayDescr>> {
+    match type_enum {
+        DataType::Int8 | DataType::Int8Array => Ok(dtype::<i8>(py)),
+        DataType::Uint8 | DataType::Uint8Array => Ok(dtype::<u8>(py)),
+        DataType::Int16 | DataType::Int16Array => Ok(dtype::<i16>(py)),
+        DataType::Uint16 | DataType::Uint16Array => Ok(dtype::<u16>(py)),
+        DataType::Int32 | DataType::Int32Array => Ok(dtype::<i32>(py)),
+        DataType::Uint32 | DataType::Uint32Array => Ok(dtype::<u32>(py)),
+        DataType::Int64 | DataType::Int64Array => Ok(dtype::<i64>(py)),
+        DataType::Uint64 | DataType::Uint64Array => Ok(dtype::<u64>(py)),
+        DataType::Float | DataType::FloatArray => Ok(dtype::<f32>(py)),
+        DataType::Double | DataType::DoubleArray => Ok(dtype::<f64>(py)),
+        _ => Err(PyTypeError::new_err(
+            "Type cannot be converted to NumPy dtype",
+        )),
     }
 }

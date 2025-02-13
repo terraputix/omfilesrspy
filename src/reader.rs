@@ -1,10 +1,10 @@
 use crate::{
-    array_index::ArrayIndex, data_type::to_numpy_dtype, errors::convert_omfilesrs_error,
+    array_index::ArrayIndex, data_type::get_numpy_dtype, errors::convert_omfilesrs_error,
     fsspec_backend::FsSpecBackend, hierarchy::OmVariable,
 };
 use delegate::delegate;
 use num_traits::Zero;
-use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
+use numpy::{Element, IntoPyArray, PyArrayDescr, PyArrayMethods, PyUntypedArray};
 use omfiles_rs::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
     core::data_types::{DataType, OmFileArrayDataType, OmFileScalarDataType},
@@ -109,8 +109,8 @@ impl OmFilePyReader {
     }
 
     #[getter]
-    fn dtype(&self) -> PyResult<String> {
-        Ok(to_numpy_dtype(&self.reader.data_type()).to_string())
+    fn dtype<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArrayDescr>> {
+        get_numpy_dtype(py, &self.reader.data_type())
     }
 
     #[getter]

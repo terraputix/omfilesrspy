@@ -153,6 +153,7 @@ def test_write_hierarchical_file():
 
         metadata = metadata_reader.get_scalar()
         assert metadata == 42.0
+        assert metadata_reader.dtype == np.float64
 
         del reader
         del child1_reader
