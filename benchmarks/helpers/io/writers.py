@@ -44,4 +44,5 @@ class NetCDFWriter(BaseWriter):
 class OMWriter(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
         writer = om.OmFilePyWriter(str(self.filename))
-        writer.write_array(data.__array__(), chunk_size, 100, 0)
+        variable = writer.write_array(data.__array__(), chunk_size, 100, 0)
+        writer.close(variable)

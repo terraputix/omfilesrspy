@@ -1,16 +1,16 @@
 use crate::{
-    array_index::ArrayIndex, data_type::to_numpy_dtype, errors::convert_omfilesrs_error,
-    fsspec_backend::FsSpecBackend,
+    array_index::ArrayIndex, data_type::get_numpy_dtype, errors::convert_omfilesrs_error,
+    fsspec_backend::FsSpecBackend, hierarchy::OmVariable,
 };
 use delegate::delegate;
 use num_traits::Zero;
-use numpy::{Element, IntoPyArray, PyArrayMethods, PyUntypedArray};
+use numpy::{Element, IntoPyArray, PyArrayDescr, PyArrayMethods, PyUntypedArray};
 use omfiles_rs::{
     backend::{backends::OmFileReaderBackend, mmapfile::MmapFile},
-    core::data_types::OmFileArrayDataType,
-    io::{reader::OmFileReader, writer::OmOffsetSize},
+    core::data_types::{DataType, OmFileArrayDataType, OmFileScalarDataType},
+    io::reader::OmFileReader,
 };
-use pyo3::prelude::*;
+use pyo3::{prelude::*, BoundObject};
 use std::{collections::HashMap, sync::Arc};
 
 #[pyclass]
@@ -81,29 +81,40 @@ impl OmFilePyReader {
         })
     }
 
-    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, (u64, u64)>> {
+    fn get_flat_variable_metadata(&self) -> PyResult<HashMap<String, OmVariable>> {
         let metadata = self.reader.get_flat_variable_metadata();
         Ok(metadata
             .into_iter()
-            .map(|(key, offset_size)| (key, (offset_size.offset, offset_size.size)))
+            .map(|(key, offset_size)| {
+                (
+                    key.clone(),
+                    OmVariable {
+                        name: key,
+                        offset: offset_size.offset,
+                        size: offset_size.size,
+                    },
+                )
+            })
             .collect())
     }
 
-    fn init_from_offset_size(&self, offset: u64, size: u64) -> PyResult<Self> {
+    fn init_from_variable(&self, variable: OmVariable) -> PyResult<Self> {
         let reader = self
             .reader
-            .init_child_from_offset_size(OmOffsetSize::new(offset, size))
+            .init_child_from_offset_size(variable.into())
             .map_err(convert_omfilesrs_error)?;
 
         let shape = reader.get_dimensions().to_vec();
         Ok(Self { reader, shape })
     }
 
-    fn dtype(&self) -> PyResult<String> {
-        Ok(to_numpy_dtype(&self.reader.data_type()).to_string())
+    #[getter]
+    fn dtype<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArrayDescr>> {
+        get_numpy_dtype(py, &self.reader.data_type())
     }
 
-    fn variable_name(&self) -> PyResult<String> {
+    #[getter]
+    fn name(&self) -> PyResult<String> {
         Ok(self.reader.get_name().unwrap_or("".to_string()))
     }
 
@@ -121,56 +132,72 @@ impl OmFilePyReader {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Scalar data types are not supported");
 
         let untyped_py_array_or_error = match dtype {
-            omfiles_rs::core::data_types::DataType::None => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int8 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint8 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int16 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint16 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int32 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint32 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int64 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Uint64 => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Float => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Double => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::String => Err(scalar_error),
-            omfiles_rs::core::data_types::DataType::Int8Array => {
-                read_untyped_array::<i8>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::Uint8Array => {
-                read_untyped_array::<u8>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::Int16Array => {
-                read_untyped_array::<i16>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::Uint16Array => {
-                read_untyped_array::<u16>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::Int32Array => {
-                read_untyped_array::<i32>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::Uint32Array => {
-                read_untyped_array::<u32>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::Int64Array => {
-                read_untyped_array::<i64>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::Uint64Array => {
-                read_untyped_array::<u64>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::FloatArray => {
-                read_untyped_array::<f32>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::DoubleArray => {
-                read_untyped_array::<f64>(&reader, read_ranges, py)
-            }
-            omfiles_rs::core::data_types::DataType::StringArray => {
-                unimplemented!("String arrays are currently not implemented")
-            }
+            DataType::None => Err(scalar_error),
+            DataType::Int8 => Err(scalar_error),
+            DataType::Uint8 => Err(scalar_error),
+            DataType::Int16 => Err(scalar_error),
+            DataType::Uint16 => Err(scalar_error),
+            DataType::Int32 => Err(scalar_error),
+            DataType::Uint32 => Err(scalar_error),
+            DataType::Int64 => Err(scalar_error),
+            DataType::Uint64 => Err(scalar_error),
+            DataType::Float => Err(scalar_error),
+            DataType::Double => Err(scalar_error),
+            DataType::String => Err(scalar_error),
+            DataType::Int8Array => read_untyped_array::<i8>(&reader, read_ranges, py),
+            DataType::Uint8Array => read_untyped_array::<u8>(&reader, read_ranges, py),
+            DataType::Int16Array => read_untyped_array::<i16>(&reader, read_ranges, py),
+            DataType::Uint16Array => read_untyped_array::<u16>(&reader, read_ranges, py),
+            DataType::Int32Array => read_untyped_array::<i32>(&reader, read_ranges, py),
+            DataType::Uint32Array => read_untyped_array::<u32>(&reader, read_ranges, py),
+            DataType::Int64Array => read_untyped_array::<i64>(&reader, read_ranges, py),
+            DataType::Uint64Array => read_untyped_array::<u64>(&reader, read_ranges, py),
+            DataType::FloatArray => read_untyped_array::<f32>(&reader, read_ranges, py),
+            DataType::DoubleArray => read_untyped_array::<f64>(&reader, read_ranges, py),
+            DataType::StringArray => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "String Arrays not currently supported",
+            )),
         };
 
         let untyped_py_array = untyped_py_array_or_error?;
 
         return Ok(untyped_py_array);
+    }
+
+    fn get_scalar(&self) -> PyResult<PyObject> {
+        Python::with_gil(|py| match self.reader.data_type() {
+            DataType::Int8 => self.read_scalar_value::<i8>(py),
+            DataType::Uint8 => self.read_scalar_value::<u8>(py),
+            DataType::Int16 => self.read_scalar_value::<i16>(py),
+            DataType::Uint16 => self.read_scalar_value::<u16>(py),
+            DataType::Int32 => self.read_scalar_value::<i32>(py),
+            DataType::Uint32 => self.read_scalar_value::<u32>(py),
+            DataType::Int64 => self.read_scalar_value::<i64>(py),
+            DataType::Uint64 => self.read_scalar_value::<u64>(py),
+            DataType::Float => self.read_scalar_value::<f32>(py),
+            DataType::Double => self.read_scalar_value::<f64>(py),
+            DataType::String => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "String data type is not supported",
+            )),
+            _ => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Data type is not scalar",
+            )),
+        })
+    }
+}
+
+impl OmFilePyReader {
+    fn read_scalar_value<'py, T>(&self, py: Python<'py>) -> PyResult<PyObject>
+    where
+        T: Element + OmFileScalarDataType + IntoPyObject<'py>,
+    {
+        let value = self.reader.read_scalar::<T>();
+
+        value
+            .into_pyobject(py)
+            .map(BoundObject::into_any)
+            .map(BoundObject::unbind)
+            .map_err(Into::into)
     }
 }
 
