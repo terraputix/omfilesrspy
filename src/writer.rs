@@ -121,14 +121,15 @@ impl OmFilePyWriter {
             size: offset_size.size,
         })
     }
+
     #[pyo3(
-        text_signature = "(key, value, children=None)",
-        signature = (key, value, children=None)
+        text_signature = "(value, name, children=None)",
+        signature = (value, name, children=None)
     )]
     fn write_scalar(
         &mut self,
-        key: &str,
         value: &Bound<PyAny>,
+        name: &str,
         children: Option<Vec<OmVariable>>,
     ) -> PyResult<OmVariable> {
         let children: Vec<OmOffsetSize> = children
@@ -142,29 +143,29 @@ impl OmFilePyWriter {
                 "Strings are currently not supported.",
             ));
         } else if let Ok(value) = value.extract::<f64>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<f32>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<i64>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<i32>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<i16>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<i8>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<u64>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<u32>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<u16>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<u8>() {
-            self.store_scalar(value, key, &children)?
+            self.store_scalar(value, name, &children)?
         } else {
             return Err(PyValueError::new_err(format!(
-                    "Unsupported attribute type for key '{}'. Supported types are: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64",
-                    key
+                    "Unsupported attribute type for name '{}'. Supported types are: i8, i16, i32, i64, u8, u16, u32, u64, f32, f64",
+                    name
                 )));
         };
         Ok(result)

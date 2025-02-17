@@ -96,9 +96,9 @@ def test_write_hierarchical_file():
         )
 
         # Write attributes and get their variables
-        meta1_var = writer.write_scalar("metadata1", 42.0)
-        meta2_var = writer.write_scalar("metadata2", 123)
-        meta3_var = writer.write_scalar("metadata3", 3.14)
+        meta1_var = writer.write_scalar(42.0, name="metadata1")
+        meta2_var = writer.write_scalar(123, name="metadata2")
+        meta3_var = writer.write_scalar(3.14, name="metadata3")
 
         # Write child1 array with attribute children
         child1_var = writer.write_array(

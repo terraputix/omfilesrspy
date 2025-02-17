@@ -75,11 +75,28 @@ class OmFilePyWriter:
         ...
 
     def write_scalar(
-            self,
-            key: str,
-            value: Union[str, int, float, bool],
-            children: list[OmVariable] | None = None,
-        ) -> OmVariable: ...
+        self,
+        value: Union[int, float],
+        name: str,
+        children: list[OmVariable] | None = None,
+    ) -> OmVariable:
+        """
+        Write a scalar value to the .om file.
+
+        Args:
+            value: Scalar value to write. Supported types are:
+                  int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64
+            name: Name of the scalar variable
+            children: List of child variables (default: None)
+
+        Returns:
+            OmVariable representing the written scalar in the file structure
+
+        Raises:
+            PyValueError: If the value type is unsupported (e.g., strings or booleans)
+            OSError: If there's an error writing to the file
+        """
+        ...
 
 class OmFilePyReader:
     """

@@ -21,6 +21,9 @@ cargo test --no-default-features
 ```
 
 ### Basic Reading
+
+OM files are [structured like a tree of variables](https://github.com/open-meteo/om-file-format?tab=readme-ov-file#data-hierarchy-model). The following example assumes that the file `test_file.om` contains an array variable as a root variable which has a dimensionality greater than 2 and a size of at least 2x100:
+
 ```python
 from omfilesrspy import OmFilePyReader
 
@@ -87,14 +90,14 @@ metadata_var = writer.write_scalar(
 )
 
 # Create root group with children
-root = writer.write_scalar(
+root_var = writer.write_scalar(
     0, # This is just placeholder data, later we will support creating groups with no data
     name="root",
     children=[features_var, labels_var, metadata_var]
 )
 
 # Finalize the file
-writer.close(root)
+writer.close(root_var)
 ```
 
 ## Benchmarks
