@@ -132,8 +132,8 @@ jobs:
   test-pypi-release:
     name: Release to TestPyPI
     runs-on: ubuntu-latest
-    # Run on pushes to main or manual workflow dispatch
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push')
+    # Run on pushes or manual workflow dispatch
+    if: ${{github.event_name == 'workflow_dispatch' || (github.event_name == 'push') }}
     needs:
       - build
       - sdist
