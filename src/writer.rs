@@ -139,9 +139,7 @@ impl OmFilePyWriter {
             .collect();
 
         let result = if let Ok(_value) = value.extract::<String>() {
-            return Err(PyValueError::new_err(
-                "Strings are currently not supported.",
-            ));
+            self.store_scalar(value.to_string(), name, &children)?
         } else if let Ok(value) = value.extract::<f64>() {
             self.store_scalar(value, name, &children)?
         } else if let Ok(value) = value.extract::<f32>() {
@@ -169,6 +167,25 @@ impl OmFilePyWriter {
                 )));
         };
         Ok(result)
+    }
+
+    #[pyo3(
+        text_signature = "(name, children)",
+        signature = (name, children)
+    )]
+    fn write_group(&mut self, name: &str, children: Vec<OmVariable>) -> PyResult<OmVariable> {
+        let children: Vec<OmOffsetSize> = children.iter().map(Into::into).collect();
+
+        let offset_size = self
+            .file_writer
+            .write_none(name, &children)
+            .map_err(convert_omfilesrs_error)?;
+
+        Ok(OmVariable {
+            name: name.to_string(),
+            offset: offset_size.offset,
+            size: offset_size.size,
+        })
     }
 }
 
