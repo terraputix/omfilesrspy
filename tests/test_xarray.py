@@ -166,7 +166,7 @@ def test_xarray_hierarchical_file():
         assert mean_temp.shape == (5, 5, 5)
         assert mean_temp.dims == ("LATITUDE", "LONGITUDE", "ALTITUDE")
 
-        del ds
+        del ds, subset
 
     finally:
         if os.path.exists(temp_file):
