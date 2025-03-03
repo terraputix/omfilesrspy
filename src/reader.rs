@@ -110,8 +110,8 @@ impl OmFilePyReader {
 
     #[getter]
     fn is_scalar(&self) -> bool {
-        let data_type = self.reader.data_type();
-        (data_type as u8) < (DataType::Int8Array as u8)
+        let data_type = self.reader.data_type() as u8;
+        data_type > (DataType::None as u8) && data_type < (DataType::Int8Array as u8)
     }
 
     #[getter]
