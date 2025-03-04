@@ -54,7 +54,7 @@ impl OmFilePyReader {
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
         let backend = BackendImpl::Mmap(MmapFile::new(file_handle, Mode::ReadOnly)?);
         let reader = OmFileReader::new(Arc::new(backend)).map_err(convert_omfilesrs_error)?;
-        let shape = reader.get_dimensions().to_vec();
+        let shape = get_shape_vec(&reader);
 
         Ok(Self { reader, shape })
     }
@@ -75,7 +75,7 @@ impl OmFilePyReader {
 
             let backend = BackendImpl::FsSpec(FsSpecBackend::new(file_obj)?);
             let reader = OmFileReader::new(Arc::new(backend)).map_err(convert_omfilesrs_error)?;
-            let shape = reader.get_dimensions().to_vec();
+            let shape = get_shape_vec(&reader);
 
             Ok(Self { reader, shape })
         })
@@ -104,7 +104,7 @@ impl OmFilePyReader {
             .init_child_from_offset_size(variable.into())
             .map_err(convert_omfilesrs_error)?;
 
-        let shape = reader.get_dimensions().to_vec();
+        let shape = get_shape_vec(&reader);
         Ok(Self { reader, shape })
     }
 
@@ -221,6 +221,20 @@ fn read_untyped_array<'py, T: Element + OmFileArrayDataType + Clone + Zero>(
     // We only add dimensions that are no singleton dimensions to the output shape
     // This is basically a dimensional squeeze and it is the same behavior as numpy
     Ok(array.squeeze().into_pyarray(py).as_untyped().to_owned()) // FIXME: avoid cloning?
+}
+
+/// Small helper function to get the correct shape of the data. We need to
+/// be careful with scalars and groups!
+fn get_shape_vec(reader: &OmFileReader<BackendImpl>) -> Vec<u64> {
+    let dtype = reader.data_type();
+    if dtype == DataType::None {
+        // "groups"
+        return vec![];
+    } else if (dtype as u8) < (DataType::Int8Array as u8) {
+        // scalars
+        return vec![];
+    }
+    reader.get_dimensions().to_vec()
 }
 
 /// Concrete wrapper type for the backend implementation, delegating to the appropriate backend
