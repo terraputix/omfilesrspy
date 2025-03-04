@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 try:
     from types import EllipsisType
 except ImportError:
     EllipsisType = type(Ellipsis)
+from typing import Tuple, Union
 
-# This is similar to https://github.com/zarr-developers/zarr-python/blob/main/src/zarr/core/indexing.py#L38C1-L40C87
-BasicSelector = int | slice | EllipsisType
-BasicSelection = BasicSelector | tuple[BasicSelector, ...]  # also used for BlockIndex
+# This is from https://github.com/zarr-developers/zarr-python/blob/main/src/zarr/core/indexing.py#L38C1-L40C87
+BasicSelector = Union[int, slice, EllipsisType]
+BasicSelection = Union[BasicSelector, Tuple[Union[int, slice, EllipsisType], ...]]  # also used for BlockIndex
