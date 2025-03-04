@@ -1,9 +1,15 @@
 import os
 
+# for some reason xr.open_dataset triggers a warning:
+# "RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility. Expected 16 from C header, got 96 from PyObject"
+# We will just filter it out for now...
+# https://github.com/pydata/xarray/issues/7259
+import warnings
+
 import numpy as np
+import omfilesrspy.omfilesrspy as om
+import omfilesrspy.xarray_backend as om_xarray
 import xarray as xr
-from omfilesrspy.omfilesrspy import OmFilePyReader, OmFilePyWriter
-from omfilesrspy.xarray_backend import OmBackendArray
 from xarray.core import indexing
 
 from .test_utils import create_test_om_file
@@ -27,8 +33,8 @@ def test_om_backend_xarray_dtype():
         try:
             create_test_om_file(temp_file, dtype=dtype)
 
-            reader = OmFilePyReader(temp_file)
-            backend_array = OmBackendArray(reader=reader)
+            reader = om.OmFilePyReader(temp_file)
+            backend_array = om_xarray.OmBackendArray(reader=reader)
 
             assert isinstance(backend_array.dtype, np.dtype)
             assert backend_array.dtype == dtype
@@ -47,6 +53,7 @@ def test_xarray_backend():
     try:
         create_test_om_file(temp_file)
 
+        warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
         ds = xr.open_dataset(temp_file, engine="om")
         data = ds["data"][:].values
         del ds
@@ -78,7 +85,7 @@ def test_xarray_hierarchical_file():
         precipitation_data = np.random.rand(5, 5, 10).astype(np.float32)
 
         # Write hierarchical structure
-        writer = OmFilePyWriter(temp_file)
+        writer = om.OmFilePyWriter(temp_file)
 
         # dimensionality metadata
         temperature_dimension_var = writer.write_scalar("LATITUDE,LONGITUDE,ALTITUDE,TIME", name="_ARRAY_DIMENSIONS")
@@ -125,9 +132,8 @@ def test_xarray_hierarchical_file():
         writer.close(root_var)
         del writer
 
-        # Read using xarray backend
+        warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
         ds = xr.open_dataset(temp_file, engine="om")
-
 
         # Check temperature data
         temp = ds["temperature"]
