@@ -1,24 +1,17 @@
 # Omfiles-rs Python bindings
 
-## Development
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 
-```bash
-# setup python virtual environment with pyenv
-python -m venv .venv
-source .venv/bin/activate
-# To always activate this environment in this directory run `pyenv local pyo3`
-pip install maturin
+> **Note:** This package is currently under active development and not yet ready for production use. APIs may change without notice until the first stable release.
 
-maturin develop --extras=dev
-# if you encounter an error:  Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
-unset CONDA_PREFIX
-```
+## Features
 
-### Tests
-
-```bash
-cargo test --no-default-features
-```
+- Fast reading and writing of multi-dimensional arrays
+- Hierarchical data structure support
+- Integration with NumPy arrays
+- Chunked data access for efficient I/O
+- Support for fsspec and xarray
 
 ### Basic Reading
 
@@ -98,6 +91,27 @@ root_var = writer.write_scalar(
 
 # Finalize the file
 writer.close(root_var)
+```
+
+
+## Development
+
+```bash
+# setup python virtual environment with pyenv
+python -m venv .venv
+source .venv/bin/activate
+# To always activate this environment in this directory run `pyenv local pyo3`
+pip install maturin
+
+maturin develop --extras=dev
+# if you encounter an error:  Both VIRTUAL_ENV and CONDA_PREFIX are set. Please unset one of them
+unset CONDA_PREFIX
+```
+
+### Tests
+
+```bash
+cargo test --no-default-features
 ```
 
 ## Benchmarks
