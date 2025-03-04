@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from xarray.backends.common import BackendArray, BackendEntrypoint, WritableCFDataStore, _normalize_path
 from xarray.backends.store import StoreBackendEntrypoint
