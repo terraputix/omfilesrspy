@@ -304,9 +304,8 @@ dependencies = [
 
 [[package]]
 name = "om-file-format-sys"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3b4509739abe80bc3998fb32d296087681f2df8883c49bfd531487d378c22da"
+version = "0.0.0"
+source = "git+https://github.com/open-meteo/om-file-format?rev=67e464335cc992adbfecf8f1d74045de268418ab#67e464335cc992adbfecf8f1d74045de268418ab"
 dependencies = [
  "bindgen",
  "cc",
@@ -316,7 +315,7 @@ dependencies = [
 [[package]]
 name = "omfiles-rs"
 version = "0.1.0"
-source = "git+https://github.com/terraputix/omfiles-rs?branch=main#b3904ff18577213de91b606c808508ab1f7eb353"
+source = "git+https://github.com/terraputix/omfiles-rs?branch=main#440aa42a38a8f48165dbff944f12da2a4efb9716"
 dependencies = [
  "memmap2",
  "ndarray",

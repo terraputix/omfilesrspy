@@ -76,7 +76,7 @@ class OmFilePyWriter:
 
     def write_scalar(
         self,
-        value: Union[int, float],
+        value: Union[int, float, str],
         name: str,
         children: list[OmVariable] | None = None,
     ) -> OmVariable:
@@ -85,7 +85,7 @@ class OmFilePyWriter:
 
         Args:
             value: Scalar value to write. Supported types are:
-                  int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64
+                  int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, str
             name: Name of the scalar variable
             children: List of child variables (default: None)
 
@@ -93,7 +93,28 @@ class OmFilePyWriter:
             OmVariable representing the written scalar in the file structure
 
         Raises:
-            PyValueError: If the value type is unsupported (e.g., strings or booleans)
+            PyValueError: If the value type is unsupported (e.g., booleans)
+            OSError: If there's an error writing to the file
+        """
+        ...
+
+    def write_group(
+        self,
+        name: str,
+        children: list[OmVariable]
+    ) -> OmVariable:
+        """
+        Create a new group in the .om file. This is essentially a variable with no data,
+        which serves as a container for other variables.
+
+        Args:
+            name: Name of the group
+            children: List of child variables
+
+        Returns:
+            OmVariable representing the written group in the file structure
+
+        Raises:
             OSError: If there's an error writing to the file
         """
         ...
@@ -167,6 +188,24 @@ class OmFilePyReader:
             Name of the variable or an empty string if not available
         """
 
+    @property
+    def is_scalar(self) -> bool:
+        """
+        Check if the variable is a scalar.
+
+        Returns:
+            True if the variable is a scalar, False otherwise
+        """
+
+    @property
+    def is_group(self) -> bool:
+        """
+        Check if the variable is a group (a variable with data type None).
+
+        Returns:
+            True if the variable is a group, False otherwise
+        """
+
     @classmethod
     def from_path(cls, path: str) -> "OmFilePyReader":
         """
@@ -223,7 +262,7 @@ class OmFilePyReader:
         """
         ...
 
-    def get_scalar(self) -> Union[str, int, float, bool]:
+    def get_scalar(self) -> Union[str, int, float]:
         """Get the scalar value of the variable."""
         ...
 
