@@ -115,6 +115,34 @@ jobs:
           python -m pip install pytest
           pytest tests/
 
+  test-min-deps:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.8" # Use the oldest supported Python version
+
+      - name: Download Linux wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-ubuntu-latest-x86_64
+          path: dist
+
+      - name: Test with minimum dependencies
+        run: |
+          python -m pip install pytest==6.0
+          WHEEL_PATH=$(ls dist/*.whl)
+          python -m pip install --force-reinstall "$WHEEL_PATH" \
+            "numpy==1.16.0" \
+            "fsspec==2023.1.0" \
+            "s3fs==2023.1.0" \
+            "xarray==2023.1.0"
+          # Run the tests with minimum dependencies
+          pytest tests/ -v
+
   sdist:
     runs-on: ubuntu-latest
     steps:
