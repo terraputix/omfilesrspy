@@ -136,7 +136,7 @@ jobs:
           python -m pip install pytest==6.0
           WHEEL_PATH=$(ls dist/*.whl)
           python -m pip install --force-reinstall "$WHEEL_PATH" \
-            "numpy==1.16.0" \
+            "numpy==1.20.0" \
             "fsspec==2023.1.0" \
             "s3fs==2023.1.0" \
             "xarray==2023.1.0"
