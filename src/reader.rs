@@ -109,6 +109,17 @@ impl OmFilePyReader {
     }
 
     #[getter]
+    fn is_scalar(&self) -> bool {
+        let data_type = self.reader.data_type() as u8;
+        data_type > (DataType::None as u8) && data_type < (DataType::Int8Array as u8)
+    }
+
+    #[getter]
+    fn is_group(&self) -> bool {
+        self.reader.data_type() == DataType::None
+    }
+
+    #[getter]
     fn dtype<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArrayDescr>> {
         get_numpy_dtype(py, &self.reader.data_type())
     }
@@ -176,9 +187,7 @@ impl OmFilePyReader {
             DataType::Uint64 => self.read_scalar_value::<u64>(py),
             DataType::Float => self.read_scalar_value::<f32>(py),
             DataType::Double => self.read_scalar_value::<f64>(py),
-            DataType::String => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                "String data type is not supported",
-            )),
+            DataType::String => self.read_scalar_value::<String>(py),
             _ => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 "Data type is not scalar",
             )),
@@ -189,7 +198,7 @@ impl OmFilePyReader {
 impl OmFilePyReader {
     fn read_scalar_value<'py, T>(&self, py: Python<'py>) -> PyResult<PyObject>
     where
-        T: Element + OmFileScalarDataType + IntoPyObject<'py>,
+        T: OmFileScalarDataType + IntoPyObject<'py>,
     {
         let value = self.reader.read_scalar::<T>();
 
