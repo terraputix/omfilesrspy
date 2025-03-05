@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12" # Use a stable Python version for building
-          cache: pip
+          cache: ${{ matrix.platform.is_musl != true && 'pip' || '' }}
 
       # Run Rust tests before building
       - name: Run cargo tests
