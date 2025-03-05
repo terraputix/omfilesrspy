@@ -34,7 +34,7 @@ runs:
 
     # Regular tests (non-musl platforms)
     - name: Run regular tests
-      if: ${{ inputs.test_type == 'standard' && inputs.is-musl != true }}
+      if: ${{ inputs.test-type == 'standard' && inputs.is-musl != true }}
       run: |
         python -m pip install pytest
         WHEEL_PATH=$(ls dist/*.whl)
@@ -44,7 +44,7 @@ runs:
 
     # Musl tests
     - name: Run musl tests
-      if: ${{ inputs.test_type == 'standard' && inputs.is-musl == true }}
+      if: ${{ inputs.test-type == 'standard' && inputs.is-musl == true }}
       uses: addnab/docker-run-action@v3
       with:
         image: alpine:latest
@@ -61,7 +61,7 @@ runs:
 
     # Minimum dependencies test
     - name: Run tests with minimum dependencies
-      if: ${{ inputs.test_type == 'min_deps' }}
+      if: ${{ inputs.test-type == 'min_deps' }}
       run: |
         python -m pip install pytest==6.0
         WHEEL_PATH=$(ls dist/*.whl)

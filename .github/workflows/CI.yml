@@ -105,86 +105,56 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config:
+        # Define default values
+        runner: [ubuntu-latest]
+        platform-name: [linux-x86_64]
+        is-musl: [false]
+        python-version: ["3.12"]
+        test-type: [standard]
+
+        # Define the matrix combinations
+        include:
           # Platform tests with Python 3.12
           - name: Linux x86_64
-            runner: ubuntu-latest
-            platform-name: linux-x86_64
-            is-musl: false
-            python_version: "3.12"
-            test_type: standard
+            # Using defaults
 
           - name: Linux musl
             runner: ubuntu-22.04
             platform-name: linux-musl-x86_64
             is-musl: true
-            python_version: "3.12"
-            test_type: standard
 
           - name: Windows
             runner: windows-latest
             platform-name: windows-x64
-            is-musl: false
-            python_version: "3.12"
-            test_type: standard
 
           - name: macOS x86_64
             runner: macos-13
             platform-name: macos-x86_64
-            is-musl: false
-            python_version: "3.12"
-            test_type: standard
 
           - name: macOS ARM64
             runner: macos-14
             platform-name: macos-arm64
-            is-musl: false
-            python_version: "3.12"
-            test_type: standard
 
           # Additional Python versions for Linux x86_64
           - name: Python 3.8
-            runner: ubuntu-latest
-            platform-name: linux-x86_64
-            is-musl: false
-            python_version: "3.8"
-            test_type: standard
+            python-version: "3.8"
 
           - name: Python 3.9
-            runner: ubuntu-latest
-            platform-name: linux-x86_64
-            is-musl: false
-            python_version: "3.9"
-            test_type: standard
+            python-version: "3.9"
 
           - name: Python 3.10
-            runner: ubuntu-latest
-            platform-name: linux-x86_64
-            is-musl: false
-            python_version: "3.10"
-            test_type: standard
+            python-version: "3.10"
 
           - name: Python 3.11
-            runner: ubuntu-latest
-            platform-name: linux-x86_64
-            is-musl: false
-            python_version: "3.11"
-            test_type: standard
+            python-version: "3.11"
 
           - name: Python 3.13
-            runner: ubuntu-latest
-            platform-name: linux-x86_64
-            is-musl: false
-            python_version: "3.13"
-            test_type: standard
+            python-version: "3.13"
 
           # Minimum dependencies test
           - name: Min Dependencies
-            runner: ubuntu-latest
-            platform-name: linux-x86_64
-            is-musl: false
-            python_version: "3.8"
-            test_type: min_deps
+            python-version: "3.8"
+            test-type: min_deps
     steps:
       # Use the test composite action
       - uses: actions/checkout@v4
@@ -192,9 +162,9 @@ jobs:
       - name: Run tests
         uses: ./.github/actions/test
         with:
-          python-version: ${{ matrix.config.python_version }}
+          python-version: ${{ matrix.config.python-version }}
           is-musl: ${{ matrix.config.is-musl }}
-          test-type: ${{ matrix.config.test_type }}
+          test-type: ${{ matrix.config.test-type }}
           platform-name: ${{ matrix.config.platform-name }}
 
   # Release workflow, dependent on both test and sdist
