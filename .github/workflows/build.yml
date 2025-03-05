@@ -61,6 +61,17 @@ jobs:
           python-version: "3.12" # Use a stable Python version for building
           cache: ${{ matrix.platform.is_musl != true && 'pip' || '' }}
 
+      # Install python dependencies to run cargo tests
+      - name: Install required python dependencies
+        if: ${{ !matrix.platform.is_musl }}
+        run: pip install numpy fsspec s3fs xarray
+        shell: bash
+
+      - name: Run cargo tests
+        if: ${{ !matrix.platform.is_musl }}
+        run: cargo test --no-default-features
+        shell: bash
+
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -70,16 +81,6 @@ jobs:
           manylinux: ${{ matrix.platform.manylinux }}
           container: ${{ matrix.platform.is_musl && 'off' || '' }}
           before-script-linux: ${{ matrix.platform.before-script }}
-
-      # Install python dependencies to run cargo tests
-      - name: Install required python dependencies
-        run: pip install numpy fsspec s3fs xarray
-        shell: bash
-
-      - name: Run cargo tests
-        if: ${{ !matrix.platform.is_musl }}
-        run: cargo test --no-default-features
-        shell: bash
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
