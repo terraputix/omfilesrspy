@@ -1,0 +1,100 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            target: x86_64
+            before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
+            manylinux: "2_28"
+
+          - name: linux-aarch64
+            runner: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            skip_tests: true
+            before-script: |
+              apt-get update && \
+              apt-get install --assume-yes --no-install-recommends crossbuild-essential-arm64
+            manylinux: "2_28"
+
+          - name: linux-musl-x86_64
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            container: docker://messense/rust-musl-cross:x86_64-musl
+            before-script: cat /etc/os-release && apt install clang -y
+            manylinux: musllinux_1_2
+            is_musl: true
+
+          - name: windows-x64
+            runner: windows-latest
+            target: x64
+
+          - name: macos-x86_64
+            runner: macos-13
+            target: x86_64
+          - name: macos-arm64
+            runner: macos-14
+            target: aarch64
+
+    container: ${{ matrix.platform.container }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # Use a stable Python version for building
+          cache: pip
+
+      # Run Rust tests before building
+      - name: Run cargo tests
+        if: ${{ !matrix.platform.is_musl }}
+        run: cargo test --no-default-features
+        shell: bash
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist --find-interpreter
+          sccache: "true"
+          manylinux: ${{ matrix.platform.manylinux }}
+          container: ${{ matrix.platform.is_musl && 'off' || '' }}
+          before-script-linux: ${{ matrix.platform.before-script }}
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform.runner }}-${{ matrix.platform.target }}
+          path: dist
+
+  sdist:
+    name: Build Source Distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
