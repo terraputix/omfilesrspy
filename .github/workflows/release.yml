@@ -1,19 +1,17 @@
 name: Release
 
 on:
-  # push:
-  #   tags:
-  #     - "v*"
-  workflow_dispatch:
+  workflow_call:
     inputs:
       publish_to_pypi:
-        description: "Publish to PyPI"
         required: true
-        default: "false"
-        type: choice
-        options:
-          - "false"
-          - "true"
+        type: boolean
+        description: "Whether to publish to PyPI"
+    secrets:
+      PYPI_API_TOKEN:
+        required: true
+      TEST_PYPI_API_TOKEN:
+        required: true
 
 permissions:
   contents: read
@@ -26,21 +24,10 @@ jobs:
       id-token: write
       contents: write
       attestations: write
-      actions: read
 
     steps:
       - name: Download wheel artifacts
         uses: actions/download-artifact@v4
-        with:
-          pattern: wheels-*
-          path: dist
-          merge-multiple: true
-
-      - name: Download sdist
-        uses: actions/download-artifact@v4
-        with:
-          name: sdist
-          path: dist
 
       # List files for debugging
       - name: List distribution files
@@ -53,7 +40,7 @@ jobs:
 
       # Publish to PyPI when tagged or requested
       - name: Publish to PyPI
-        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.publish_to_pypi == 'true'
+        if: ${{ inputs.publish_to_pypi }}
         uses: PyO3/maturin-action@v1
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
@@ -63,7 +50,6 @@ jobs:
 
       # Otherwise publish to TestPyPI
       - name: Publish to TestPyPI
-        if: ${{ !(startsWith(github.ref, 'refs/tags/') || github.event.inputs.publish_to_pypi == 'true') }}
         uses: PyO3/maturin-action@v1
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
@@ -74,7 +60,7 @@ jobs:
 
       # # Create a GitHub release when a tag is created
       # - name: Create GitHub Release
-      #   if: startsWith(github.ref, 'refs/tags/')
+      #   if: ${{ inputs.publish_to_pypi }}
       #   uses: softprops/action-gh-release@v1
       #   with:
       #     generate_release_notes: true

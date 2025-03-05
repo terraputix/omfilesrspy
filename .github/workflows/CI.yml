@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish_to_pypi:
+        description: "Publish to PyPI"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+jobs:
+  # Import the build workflow
+  build:
+    uses: ./.github/workflows/build.yml
+
+  # Import the test workflow, dependent on build
+  test:
+    needs: build
+    uses: ./.github/workflows/test.yml
+    with:
+      build_run_id: ${{ github.run_id }}
+
+  # Import the release workflow, dependent on test
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_to_pypi == 'true' }}
+    needs: test
+    uses: ./.github/workflows/release.yml
+    with:
+      publish_to_pypi: ${{ github.event.inputs.publish_to_pypi == 'true' || startsWith(github.ref, 'refs/tags/v') }}
+    secrets:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}

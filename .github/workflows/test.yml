@@ -1,10 +1,12 @@
 name: Test
 
 on:
-  workflow_run:
-    workflows: ["build.yml"]
-    types:
-      - completed
+  workflow_call:
+    inputs:
+      build_run_id:
+        required: true
+        type: string
+        description: "The run ID of the build workflow"
 
 permissions:
   contents: read
@@ -98,8 +100,7 @@ jobs:
         with:
           name: wheels-${{ matrix.platform.name }}
           path: dist
-          repository: ${{ github.repository }}
-          run_id: ${{ github.event.workflow_run.id }}
+          run_id: ${{ inputs.build_run_id }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       # Regular tests (non-musl platforms)
