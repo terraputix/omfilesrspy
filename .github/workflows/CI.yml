@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - "v*"
+      - "*"
   pull_request:
   workflow_dispatch:
     inputs:
@@ -22,24 +22,239 @@ permissions:
   contents: read
 
 jobs:
-  # Import the build workflow
   build:
-    uses: ./.github/workflows/build.yml
+    name: Build - ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.runner }}
+    container: ${{ matrix.platform.container }}
+    strategy:
+      matrix:
+        platform:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            target: x86_64
+            before-script: python3 -m ensurepip && cat /etc/os-release && yum install clang -y
+            manylinux: "2_28"
+            is-musl: false
 
-  # Import the test workflow, dependent on build
+          - name: linux-aarch64
+            runner: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            skip_tests: true
+            before-script: |
+              apt-get update && \
+              apt-get install --assume-yes --no-install-recommends crossbuild-essential-arm64
+            manylinux: "2_28"
+            is-musl: false
+
+          - name: linux-musl-x86_64
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            container: docker://messense/rust-musl-cross:x86_64-musl
+            before-script: cat /etc/os-release && apt install clang -y
+            manylinux: musllinux_1_2
+            is-musl: true
+
+          - name: windows-x64
+            runner: windows-latest
+            target: x64
+            is-musl: false
+
+          - name: macos-x86_64
+            runner: macos-13
+            target: x86_64
+            is-musl: false
+
+          - name: macos-arm64
+            runner: macos-14
+            target: aarch64
+            is-musl: false
+
+    steps:
+      # Use the build composite action
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: ./.github/actions/build
+        with:
+          python-version: "3.12"
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.manylinux }}
+          is-musl: ${{ matrix.platform.is-musl }}
+          before-script: ${{ matrix.platform.before-script }}
+          platform-name: ${{ matrix.platform.name }}
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
+
   test:
     needs: build
-    uses: ./.github/workflows/test.yml
-    with:
-      build_run_id: ${{ github.run_id }}
+    name: Test - ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          # Platform tests with Python 3.12
+          - name: Linux x86_64
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python_version: "3.12"
+            test_type: standard
 
-  # Import the release workflow, dependent on test
+          - name: Linux musl
+            runner: ubuntu-22.04
+            platform-name: linux-musl-x86_64
+            is-musl: true
+            python_version: "3.12"
+            test_type: standard
+
+          - name: Windows
+            runner: windows-latest
+            platform-name: windows-x64
+            is-musl: false
+            python_version: "3.12"
+            test_type: standard
+
+          - name: macOS x86_64
+            runner: macos-13
+            platform-name: macos-x86_64
+            is-musl: false
+            python_version: "3.12"
+            test_type: standard
+
+          - name: macOS ARM64
+            runner: macos-14
+            platform-name: macos-arm64
+            is-musl: false
+            python_version: "3.12"
+            test_type: standard
+
+          # Additional Python versions for Linux x86_64
+          - name: Python 3.8
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python_version: "3.8"
+            test_type: standard
+
+          - name: Python 3.9
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python_version: "3.9"
+            test_type: standard
+
+          - name: Python 3.10
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python_version: "3.10"
+            test_type: standard
+
+          - name: Python 3.11
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python_version: "3.11"
+            test_type: standard
+
+          - name: Python 3.13
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python_version: "3.13"
+            test_type: standard
+
+          # Minimum dependencies test
+          - name: Min Dependencies
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python_version: "3.8"
+            test_type: min_deps
+    steps:
+      # Use the test composite action
+      - uses: actions/checkout@v4
+
+      - name: Run tests
+        uses: ./.github/actions/test
+        with:
+          python-version: ${{ matrix.config.python_version }}
+          is-musl: ${{ matrix.config.is-musl }}
+          test-type: ${{ matrix.config.test_type }}
+          platform-name: ${{ matrix.config.platform-name }}
+
+  # Release workflow, dependent on both test and sdist
   release:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_to_pypi == 'true' }}
-    needs: test
-    uses: ./.github/workflows/release.yml
-    with:
-      publish_to_pypi: ${{ github.event.inputs.publish_to_pypi == 'true' || startsWith(github.ref, 'refs/tags/v') }}
-    secrets:
-      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    needs: [test, sdist]
+    name: Release Package
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+    steps:
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifact-download
+
+      # Create dist directory
+      - name: Create dist directory
+        run: mkdir -p dist
+        shell: bash
+
+      # Move all wheels to dist directory
+      - name: Collect wheels
+        run: |
+          find artifact-download -name "*.whl" -o -name "*.tar.gz" | xargs -I{} cp {} dist/
+          echo "Package files in dist directory:"
+          ls -la dist/
+        shell: bash
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "dist/*"
+
+      # Publish to PyPI when tagged or requested
+      - name: Publish to PyPI
+        if: ${{ github.event.inputs.publish_to_pypi }}
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*
+
+      # Otherwise publish to TestPyPI
+      - name: Publish to TestPyPI
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          MATURIN_REPOSITORY: testpypi
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*
+
+    # # Create a GitHub release when a tag is created
+    # - name: Create GitHub Release
+    #   if: ${{ inputs.publish_to_pypi }}
+    #   uses: softprops/action-gh-release@v1
+    #   with:
+    #     generate_release_notes: true
+    #     files: dist/*
