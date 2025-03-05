@@ -243,7 +243,7 @@ jobs:
 
       # Only publish to PyPI if the publish_to_pypi input is true
       - name: Publish to PyPI
-        if: ${{ github.event.inputs.publish_to_pypi }}
+        if: ${{ github.event.inputs.publish_to_pypi == 'true' }}
         uses: PyO3/maturin-action@v1
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
