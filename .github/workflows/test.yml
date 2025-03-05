@@ -15,8 +15,6 @@ permissions:
 jobs:
   test:
     name: ${{ matrix.name }}
-    # Only run if the build workflow was successful
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -25,8 +23,7 @@ jobs:
         test_type: [standard]
         python-version: ["3.12"]
         platform:
-          - &linux_x86_64
-            name: linux-x86_64
+          - name: linux-x86_64
             runner: ubuntu-latest
             is_musl: false
 
@@ -34,7 +31,6 @@ jobs:
         include:
           # Platform tests (uses default Python 3.12 and test_type)
           - name: "Linux x86_64"
-            platform: *linux_x86_64
 
           - name: "Linux musl"
             platform:
@@ -62,28 +58,22 @@ jobs:
 
           # Additional Python versions for Linux x86_64
           - name: "Python 3.8"
-            platform: *linux_x86_64
             python-version: "3.8"
 
           - name: "Python 3.9"
-            platform: *linux_x86_64
             python-version: "3.9"
 
           - name: "Python 3.10"
-            platform: *linux_x86_64
             python-version: "3.10"
 
           - name: "Python 3.11"
-            platform: *linux_x86_64
             python-version: "3.11"
 
           - name: "Python 3.13"
-            platform: *linux_x86_64
             python-version: "3.13"
 
           # Minimum dependencies test
           - name: "Min Dependencies"
-            platform: *linux_x86_64
             python-version: "3.8"
             test_type: min_deps
 
