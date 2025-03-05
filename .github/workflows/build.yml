@@ -56,6 +56,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Cache Rust build artifacts
+      - name: Cache Rust build
+        if: ${{ !matrix.platform.is_musl }} # Skip for musl due to container limitations
+        uses: actions/cache@v4
+        with:
+          path: |
+            target
+          key: ${{ runner.os }}-build-${{ matrix.platform.name }}-${{ hashFiles('**/Cargo.lock', 'src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ matrix.platform.name }}-
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12" # Use a stable Python version for building
