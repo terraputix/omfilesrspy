@@ -105,54 +105,84 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Define default values
-        runner: [ubuntu-latest]
-        platform-name: [linux-x86_64]
-        is-musl: [false]
-        python-version: ["3.12"]
-        test-type: [standard]
-
-        # Define the matrix combinations
-        include:
+        config:
           # Platform tests with Python 3.12
           - name: Linux x86_64
-            # Using defaults
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
+            python-version: "3.12"
+            test-type: standard
 
           - name: Linux musl
             runner: ubuntu-22.04
             platform-name: linux-musl-x86_64
             is-musl: true
+            python-version: "3.12"
+            test-type: standard
 
           - name: Windows
             runner: windows-latest
             platform-name: windows-x64
+            is-musl: false
+            python-version: "3.12"
+            test-type: standard
 
           - name: macOS x86_64
             runner: macos-13
             platform-name: macos-x86_64
+            is-musl: false
+            python-version: "3.12"
+            test-type: standard
 
           - name: macOS ARM64
             runner: macos-14
             platform-name: macos-arm64
+            is-musl: false
+            python-version: "3.12"
+            test-type: standard
 
           # Additional Python versions for Linux x86_64
           - name: Python 3.8
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
             python-version: "3.8"
+            test-type: standard
 
           - name: Python 3.9
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
             python-version: "3.9"
+            test-type: standard
 
           - name: Python 3.10
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
             python-version: "3.10"
+            test-type: standard
 
           - name: Python 3.11
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
             python-version: "3.11"
+            test-type: standard
 
           - name: Python 3.13
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
             python-version: "3.13"
+            test-type: standard
 
           # Minimum dependencies test
           - name: Min Dependencies
+            runner: ubuntu-latest
+            platform-name: linux-x86_64
+            is-musl: false
             python-version: "3.8"
             test-type: min_deps
     steps:
@@ -201,22 +231,22 @@ jobs:
         with:
           subject-path: "dist/*"
 
-      # Publish to PyPI when tagged or requested
-      - name: Publish to PyPI
-        if: ${{ github.event.inputs.publish_to_pypi }}
-        uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        with:
-          command: upload
-          args: --non-interactive --skip-existing dist/*
-
-      # Otherwise publish to TestPyPI
+      # Publish to TestPyPI
       - name: Publish to TestPyPI
         uses: PyO3/maturin-action@v1
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
           MATURIN_REPOSITORY: testpypi
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*
+
+      # Only publish to PyPI if the publish_to_pypi input is true
+      - name: Publish to PyPI
+        if: ${{ github.event.inputs.publish_to_pypi }}
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: upload
           args: --non-interactive --skip-existing dist/*
