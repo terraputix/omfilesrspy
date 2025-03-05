@@ -61,23 +61,21 @@ jobs:
           python-version: "3.12" # Use a stable Python version for building
           cache: ${{ matrix.platform.is_musl != true && 'pip' || '' }}
 
-      - name: Build wheels and run development install
+      - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          command: |
-            # First build wheels
-            maturin build --release --out dist --find-interpreter
-            # Then do a development install if not musl and not skipping tests
-            if [[ "${{ matrix.platform.is_musl }}" != "true" && "${{ matrix.platform.skip_tests }}" != "true" ]]; then
-              maturin develop --release
-            fi
+          args: --release --out dist --find-interpreter
           sccache: "true"
           manylinux: ${{ matrix.platform.manylinux }}
           container: ${{ matrix.platform.is_musl && 'off' || '' }}
           before-script-linux: ${{ matrix.platform.before-script }}
 
-      # Run Rust tests after building! This ensures that the python dependencies are installed
+      # Install python dependencies to run cargo tests
+      - name: Install required python dependencies
+        run: pip install numpy fsspec s3fs xarray
+        shell: bash
+
       - name: Run cargo tests
         if: ${{ !matrix.platform.is_musl }}
         run: cargo test --no-default-features
