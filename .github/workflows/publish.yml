@@ -47,11 +47,14 @@ jobs:
       id-token: write
       contents: write
       attestations: write
+      actions: read
     steps:
       - name: Download artifacts from CI
         uses: dawidd6/action-download-artifact@v9
         with:
-          workflow: build-and-test.yml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: build-test.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
           path: artifact-download
 
       # Create dist directory
