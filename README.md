@@ -9,9 +9,9 @@
 
 - Fast reading and writing of multi-dimensional arrays
 - Hierarchical data structure support
-- Integration with NumPy arrays
+- Integration with [NumPy](https://github.com/numpy/numpy) arrays
 - Chunked data access for efficient I/O
-- Support for fsspec and xarray
+- Support for [fsspec](https://github.com/fsspec/filesystem_spec) and [xarray](https://github.com/pydata/xarray)
 
 ### Basic Reading
 
