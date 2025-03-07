@@ -7,8 +7,8 @@ import os
 import warnings
 
 import numpy as np
-import pyomfiles.pyomfiles as om
-import pyomfiles.xarray_backend as om_xarray
+import omfiles.omfiles as om
+import omfiles.xarray_backend as om_xarray
 import xarray as xr
 from xarray.core import indexing
 

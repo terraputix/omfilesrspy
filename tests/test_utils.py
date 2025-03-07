@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-from pyomfiles import OmFilePyWriter
+from omfiles import OmFilePyWriter
 
 
 def create_test_om_file(filename: str = "test_file.om", shape=(5, 5), dtype=np.float32) -> tuple[str, np.ndarray]:

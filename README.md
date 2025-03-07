@@ -18,7 +18,7 @@
 OM files are [structured like a tree of variables](https://github.com/open-meteo/om-file-format?tab=readme-ov-file#data-hierarchy-model). The following example assumes that the file `test_file.om` contains an array variable as a root variable which has a dimensionality greater than 2 and a size of at least 2x100:
 
 ```python
-from pyomfiles import OmFilePyReader
+from omfiles import OmFilePyReader
 
 reader = OmFilePyReader("test_file.om")
 data = reader[0:2, 0:100, ...]
@@ -29,7 +29,7 @@ data = reader[0:2, 0:100, ...]
 #### Simple Array
 ```python
 import numpy as np
-from pyomfiles import OmFilePyWriter
+from omfiles import OmFilePyWriter
 
 # Create sample data
 data = np.random.rand(100, 100).astype(np.float32)
@@ -54,7 +54,7 @@ writer.close(variable)
 #### Hierarchical Structure
 ```python
 import numpy as np
-from pyomfiles import OmFilePyWriter
+from omfiles import OmFilePyWriter
 
 # Create sample data
 features = np.random.rand(1000, 64).astype(np.float32)

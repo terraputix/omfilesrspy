@@ -1,11 +1,11 @@
 import fsspec
 import numpy as np
-import pyomfiles
+import omfiles
 
 # def test_fsspec_backend():
 #     fsspec_object = fsspec.open("test_files/read_test.om", "rb")
 
-#     file = pyomfiles.FsSpecBackend(fsspec_object)
+#     file = omfiles.FsSpecBackend(fsspec_object)
 #     assert file.file_size == 144
 
 
@@ -15,7 +15,7 @@ def test_s3_reader():
     backend = fs.open(file_path, mode="rb")
 
     # Create reader over fs spec backend
-    reader = pyomfiles.OmFilePyReader(backend)
+    reader = omfiles.OmFilePyReader(backend)
     data = reader[57812:57813, 0:100]
 
     # Verify the data
@@ -29,7 +29,7 @@ def test_s3_reader_with_cache():
     backend = fs.open(file_path, mode="rb", cache_type="mmap", block_size=1024, cache_options={"location": "cache"})
 
     # Create reader over fs spec backend
-    reader = pyomfiles.OmFilePyReader(backend)
+    reader = omfiles.OmFilePyReader(backend)
     data = reader[57812:57813, 0:100]
 
     # Verify the data

@@ -1,6 +1,6 @@
 import argparse
 
-from pyomfiles.types import BasicSelection
+from omfiles.types import BasicSelection
 
 
 def parse_args() -> argparse.Namespace:
