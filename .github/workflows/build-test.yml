@@ -1,4 +1,4 @@
-name: CI
+name: Build and Test
 
 on:
   push:
@@ -8,15 +8,6 @@ on:
       - "*"
   pull_request:
   workflow_dispatch:
-    inputs:
-      publish_to_pypi:
-        description: "Publish to PyPI"
-        required: true
-        default: "false"
-        type: choice
-        options:
-          - "false"
-          - "true"
 
 permissions:
   contents: read
@@ -196,65 +187,3 @@ jobs:
           is-musl: ${{ matrix.config.is-musl }}
           test-type: ${{ matrix.config.test-type }}
           platform-name: ${{ matrix.config.platform-name }}
-
-  # Release workflow, dependent on both test and sdist
-  release:
-    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    needs: [test, sdist]
-    name: Release Package
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: write
-      attestations: write
-    steps:
-      - name: Download all wheel artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifact-download
-
-      # Create dist directory
-      - name: Create dist directory
-        run: mkdir -p dist
-        shell: bash
-
-      # Move all wheels to dist directory
-      - name: Collect wheels
-        run: |
-          find artifact-download -name "*.whl" -o -name "*.tar.gz" | xargs -I{} cp {} dist/
-          echo "Package files in dist directory:"
-          ls -la dist/
-        shell: bash
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-path: "dist/*"
-
-      # Publish to TestPyPI
-      - name: Publish to TestPyPI
-        uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          MATURIN_REPOSITORY: testpypi
-        with:
-          command: upload
-          args: --non-interactive --skip-existing dist/*
-
-      # Only publish to PyPI if the publish_to_pypi input is true
-      - name: Publish to PyPI
-        if: ${{ github.event.inputs.publish_to_pypi == 'true' }}
-        uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        with:
-          command: upload
-          args: --non-interactive --skip-existing dist/*
-
-    # # Create a GitHub release when a tag is created
-    # - name: Create GitHub Release
-    #   if: ${{ inputs.publish_to_pypi }}
-    #   uses: softprops/action-gh-release@v1
-    #   with:
-    #     generate_release_notes: true
-    #     files: dist/*
