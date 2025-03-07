@@ -3,7 +3,7 @@ requires = ["maturin>=1.7,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "omfilesrspy"
+name = "pyomfiles"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
@@ -27,4 +27,4 @@ bindings = "pyo3"        # pyo3 bindings is actually the default for maturin
 dev = ["pytest>=6.0", "hidefix", "h5py", "netCDF4", "zarr"]
 
 [project.entry-points."xarray.backends"]
-om = "omfilesrspy.xarray_backend:OmXarrayEntrypoint"
+om = "pyomfiles.xarray_backend:OmXarrayEntrypoint"

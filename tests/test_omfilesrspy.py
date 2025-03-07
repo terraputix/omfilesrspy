@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-import omfilesrspy
+import pyomfiles
 
 from .test_utils import create_test_om_file
 
@@ -12,7 +12,7 @@ def test_write_om_roundtrip():
     try:
         create_test_om_file(temp_file)
 
-        reader = omfilesrspy.OmFilePyReader(temp_file)
+        reader = pyomfiles.OmFilePyReader(temp_file)
         data = reader[0:5, 0:5]
         del reader
 
@@ -54,14 +54,14 @@ def test_round_trip_array_datatypes():
 
         try:
             # Write data
-            writer = omfilesrspy.OmFilePyWriter(temp_file)
+            writer = pyomfiles.OmFilePyWriter(temp_file)
             variable = writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
             writer.close(variable)
 
             del writer
 
             # Read data back
-            reader = omfilesrspy.OmFilePyReader(temp_file)
+            reader = pyomfiles.OmFilePyReader(temp_file)
             read_data = reader[:]
             del reader
 
@@ -85,7 +85,7 @@ def test_write_hierarchical_file():
         child2_data = np.random.rand(3, 3).astype(np.float32)
 
         # Write hierarchical structure
-        writer = omfilesrspy.OmFilePyWriter(temp_file)
+        writer = pyomfiles.OmFilePyWriter(temp_file)
 
         # Write child2 array
         child2_var = writer.write_array(
@@ -123,7 +123,7 @@ def test_write_hierarchical_file():
         del writer
 
         # Read and verify the data using OmFilePyReader
-        reader = omfilesrspy.OmFilePyReader(temp_file)
+        reader = pyomfiles.OmFilePyReader(temp_file)
 
         # Verify root data
         read_root = reader[:]

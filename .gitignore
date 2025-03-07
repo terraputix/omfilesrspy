@@ -79,3 +79,6 @@ docs/_build/
 
 # Pyenv
 .python-version
+
+# CSpell Spell Checker
+cspell.json

@@ -7,7 +7,7 @@ from xarray.core import indexing
 from xarray.core.utils import FrozenDict
 from xarray.core.variable import Variable
 
-from .omfilesrspy import OmFilePyReader, OmVariable
+from .pyomfiles import OmFilePyReader, OmVariable
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"

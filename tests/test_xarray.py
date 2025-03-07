@@ -7,8 +7,8 @@ import os
 import warnings
 
 import numpy as np
-import omfilesrspy.omfilesrspy as om
-import omfilesrspy.xarray_backend as om_xarray
+import pyomfiles.pyomfiles as om
+import pyomfiles.xarray_backend as om_xarray
 import xarray as xr
 from xarray.core import indexing
 
