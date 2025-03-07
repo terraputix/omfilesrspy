@@ -49,10 +49,9 @@ jobs:
       attestations: write
     steps:
       - name: Download artifacts from CI
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v9
         with:
           workflow: build-and-test.yml
-          commit: ${{ github.sha }}
           path: artifact-download
 
       # Create dist directory
