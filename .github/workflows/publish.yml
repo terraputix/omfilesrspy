@@ -13,46 +13,22 @@ on:
           - "true"
 
 jobs:
-  # # First check if CI workflow succeeded
-  # check-ci:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Check CI workflow status
-  #       uses: actions/github-script@v7
-  #       id: check-status
-  #       with:
-  #         script: |
-  #           const ref = context.sha;
-  #           const workflow_name = 'Build and Test';
-
-  #           const workflow_runs = await github.rest.actions.listWorkflowRuns({
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             workflow_id: workflow_name,
-  #             head_sha: ref,
-  #           });
-
-  #           const latest_run = workflow_runs.data.workflow_runs[0];
-  #           if (!latest_run || latest_run.conclusion !== 'success') {
-  #             core.setFailed('CI workflow has not succeeded for this commit');
-  #             return false;
-  #           }
-  #           return true;
-
   publish:
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    # needs: check-ci
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: write
       attestations: write
+      actions: read
     steps:
-      - name: Download all wheel artifacts
-        uses: actions/download-artifact@v4
+      - name: Download artifacts from CI
+        uses: dawidd6/action-download-artifact@v9
         with:
-          workflow: build-and-test.yml
-          commit: ${{ github.sha }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: build-test.yml
+          commit: ${{ github.event.workflow_run.head_sha }}
+          workflow_conclusion: success
           path: artifact-download
 
       # Create dist directory
@@ -77,7 +53,6 @@ jobs:
       - name: Publish to TestPyPI
         uses: PyO3/maturin-action@v1
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
           MATURIN_REPOSITORY: testpypi
         with:
           command: upload
@@ -87,8 +62,6 @@ jobs:
       - name: Publish to PyPI
         if: ${{ github.event.inputs.publish_to_pypi == 'true' }}
         uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: upload
           args: --non-interactive --skip-existing dist/*
