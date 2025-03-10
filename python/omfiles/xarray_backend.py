@@ -4,6 +4,7 @@ import numpy as np
 from xarray.backends.common import BackendArray, BackendEntrypoint, WritableCFDataStore, _normalize_path
 from xarray.backends.store import StoreBackendEntrypoint
 from xarray.core import indexing
+from xarray.core.dataset import Dataset
 from xarray.core.utils import FrozenDict
 from xarray.core.variable import Variable
 
@@ -21,15 +22,16 @@ class OmXarrayEntrypoint(BackendEntrypoint):
         filename_or_obj,
         *,
         drop_variables=None,
-    ):
+    ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
-        root_variable = OmFilePyReader(filename_or_obj)
-        store = OmDataStore(root_variable)
-        store_entrypoint = StoreBackendEntrypoint()
-        return store_entrypoint.open_dataset(
-            store,
-            drop_variables=drop_variables,
-        )
+        with OmFilePyReader(filename_or_obj) as root_variable:
+            store = OmDataStore(root_variable)
+            store_entrypoint = StoreBackendEntrypoint()
+            return store_entrypoint.open_dataset(
+                store,
+                drop_variables=drop_variables,
+            )
+        raise ValueError("Failed to open dataset")
 
     description = "Use .om files in Xarray"
 
@@ -148,6 +150,9 @@ class OmDataStore(WritableCFDataStore):
 
             data = indexing.LazilyIndexedArray(backend_array)
             return Variable(dims=dim_names, data=data, attrs=attrs_for_var, encoding=None, fastpath=True)
+
+    def close(self, **kwargs):
+        self.root_variable.close()
 
 
 class OmBackendArray(BackendArray):
