@@ -14,12 +14,19 @@ use omfiles_rs::{
     io::reader::OmFileReader,
 };
 use pyo3::{prelude::*, BoundObject};
-use std::fs::File;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    fs::File,
+    sync::{Arc, RwLock},
+};
 
 #[pyclass]
 pub struct OmFilePyReader {
-    reader: Option<OmFileReader<BackendImpl>>,
+    /// The reader is stored in an Option to be able to properly close it,
+    /// particularly when working with memory-mapped files.
+    /// The RwLock is used to allow multiple readers to access the reader
+    /// concurrently, but only one writer to close it.
+    reader: RwLock<Option<OmFileReader<BackendImpl>>>,
     #[pyo3(get)]
     shape: Vec<u64>,
 }
@@ -58,7 +65,7 @@ impl OmFilePyReader {
         let shape = get_shape_vec(&reader);
 
         Ok(Self {
-            reader: Some(reader),
+            reader: RwLock::new(Some(reader)),
             shape,
         })
     }
@@ -82,7 +89,7 @@ impl OmFilePyReader {
             let shape = get_shape_vec(&reader);
 
             Ok(Self {
-                reader: Some(reader),
+                reader: RwLock::new(Some(reader)),
                 shape,
             })
         })
@@ -115,10 +122,60 @@ impl OmFilePyReader {
 
             let shape = get_shape_vec(&child_reader);
             Ok(Self {
-                reader: Some(child_reader),
+                reader: RwLock::new(Some(child_reader)),
                 shape,
             })
         })
+    }
+
+    // Context manager methods
+    fn __enter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    #[pyo3(signature = (_exc_type=None, _exc_value=None, _traceback=None))]
+    fn __exit__(
+        &self,
+        _exc_type: Option<PyObject>,
+        _exc_value: Option<PyObject>,
+        _traceback: Option<PyObject>,
+    ) -> PyResult<bool> {
+        self.close()?;
+        Ok(false)
+    }
+
+    #[getter]
+    fn closed(&self) -> PyResult<bool> {
+        let guard = self.reader.try_read().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Lock error: {}", e))
+        })?;
+
+        Ok(guard.is_none())
+    }
+
+    fn close(&self) -> PyResult<()> {
+        // Need write access to take the reader
+        let mut guard = self.reader.try_write().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Lock error: {}", e))
+        })?;
+
+        // takes the reader, leaving None in the RwLock
+        if let Some(reader) = guard.take() {
+            // Extract the backend before dropping reader
+            if let Ok(backend) = Arc::try_unwrap(reader.backend) {
+                match backend {
+                    BackendImpl::FsSpec(fs_backend) => {
+                        fs_backend.close()?;
+                    }
+                    BackendImpl::Mmap(_) => {
+                        // Will be dropped automatically
+                    }
+                }
+            }
+            // The reader is dropped here when it goes out of scope
+        }
+
+        Ok(())
     }
 
     #[getter]
@@ -219,7 +276,12 @@ impl OmFilePyReader {
     where
         F: FnOnce(&OmFileReader<BackendImpl>) -> PyResult<R>,
     {
-        if let Some(reader) = &self.reader {
+        let guard = self.reader.try_read().map_err(|_| {
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Trying to read from a reader which is being closed",
+            )
+        })?;
+        if let Some(reader) = &*guard {
             f(reader)
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(

@@ -22,6 +22,16 @@ impl FsSpecBackend {
             file_size: size,
         })
     }
+
+    pub fn close(&self) -> PyResult<()> {
+        Python::with_gil(|py| {
+            let file_obj = &self.py_file;
+            if file_obj.bind(py).hasattr("close")? {
+                file_obj.bind(py).call_method0("close")?;
+            }
+            Ok(())
+        })
+    }
 }
 
 impl OmFileReaderBackend for FsSpecBackend {

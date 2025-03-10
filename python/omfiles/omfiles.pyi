@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -207,6 +207,58 @@ class OmFilePyReader:
         Returns:
             True if the variable is a group, False otherwise
         """
+
+    @property
+    def closed(self) -> bool:
+        """
+        Check if the reader is closed.
+
+        Returns:
+            True if the reader is closed, False otherwise
+        """
+        ...
+
+    def close(self) -> None:
+        """
+        Close the reader and release resources.
+
+        This method releases all resources associated with the reader.
+        After closing, any operation on the reader will raise a ValueError.
+
+        It is safe to call this method multiple times.
+        """
+        ...
+
+    def __enter__(self) -> "OmFilePyReader":
+        """
+        Enter a context manager block.
+
+        Returns:
+            Self for use in context manager
+
+        Raises:
+            ValueError: If the reader is already closed
+        """
+        ...
+
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[object]
+    ) -> bool:
+        """
+        Exit a context manager block, closing the reader.
+
+        Args:
+            exc_type: The exception type, if an exception was raised
+            exc_val: The exception value, if an exception was raised
+            exc_tb: The traceback, if an exception was raised
+
+        Returns:
+            False (exceptions are not suppressed)
+        """
+        ...
 
     @classmethod
     def from_path(cls, path: str) -> "OmFilePyReader":
