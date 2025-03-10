@@ -58,8 +58,6 @@ def test_round_trip_array_datatypes():
             variable = writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
             writer.close(variable)
 
-            del writer
-
             # Read data back
             reader = omfiles.OmFilePyReader(temp_file)
             read_data = reader[:]
@@ -120,7 +118,6 @@ def test_write_hierarchical_file():
 
         # Finalize the file
         writer.close(root_var)
-        del writer
 
         # Read and verify the data using OmFilePyReader
         reader = omfiles.OmFilePyReader(temp_file)

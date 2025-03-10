@@ -10,6 +10,5 @@ def create_test_om_file(filename: str = "test_file.om", shape=(5, 5), dtype=np.f
     writer = OmFilePyWriter(filename)
     variable = writer.write_array(test_data, chunks=[5, 5])
     writer.close(variable)
-    del writer
 
     return filename, test_data

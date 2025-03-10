@@ -131,7 +131,6 @@ def test_xarray_hierarchical_file():
 
         # Finalize the file
         writer.close(root_var)
-        del writer
 
         warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
         ds = xr.open_dataset(temp_file, engine="om")
