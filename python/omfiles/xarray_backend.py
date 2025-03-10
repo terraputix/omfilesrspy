@@ -151,7 +151,7 @@ class OmDataStore(WritableCFDataStore):
             data = indexing.LazilyIndexedArray(backend_array)
             return Variable(dims=dim_names, data=data, attrs=attrs_for_var, encoding=None, fastpath=True)
 
-    def close(self, **kwargs):
+    def close(self):
         self.root_variable.close()
 
 
