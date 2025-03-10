@@ -14,7 +14,7 @@ def test_write_om_roundtrip():
 
         reader = omfiles.OmFilePyReader(temp_file)
         data = reader[0:5, 0:5]
-        del reader
+        reader.close()
 
         assert data.shape == (5, 5)
         assert data.dtype == np.float32
@@ -63,7 +63,7 @@ def test_round_trip_array_datatypes():
             # Read data back
             reader = omfiles.OmFilePyReader(temp_file)
             read_data = reader[:]
-            del reader
+            reader.close()
 
             # Verify data
             assert read_data.dtype == test_data.dtype
@@ -155,10 +155,10 @@ def test_write_hierarchical_file():
         assert metadata == 42.0
         assert metadata_reader.dtype == np.float64
 
-        del reader
-        del child1_reader
-        del child2_reader
-        del metadata_reader
+        reader.close()
+        child1_reader.close()
+        child2_reader.close()
+        metadata_reader.close()
 
     finally:
         if os.path.exists(temp_file):

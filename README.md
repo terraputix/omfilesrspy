@@ -22,7 +22,9 @@ pip install omfiles
 - Chunked data access for efficient I/O
 - Support for [fsspec](https://github.com/fsspec/filesystem_spec) and [xarray](https://github.com/pydata/xarray)
 
-### Basic Reading
+### Reading Arrays
+
+#### Basic Reading
 
 OM files are [structured like a tree of variables](https://github.com/open-meteo/om-file-format?tab=readme-ov-file#data-hierarchy-model). The following example assumes that the file `test_file.om` contains an array variable as a root variable which has a dimensionality greater than 2 and a size of at least 2x100:
 
@@ -31,6 +33,28 @@ from omfiles import OmFilePyReader
 
 reader = OmFilePyReader("test_file.om")
 data = reader[0:2, 0:100, ...]
+reader.close() # Close the reader to release resources
+```
+
+#### Reading Data from S3
+
+```python
+import fsspec
+from omfiles import OmFilePyReader
+
+# path to the file on S3
+s3_path = "s3://openmeteo/data/dwd_icon_d2/temperature_2m/chunk_3960.om"
+# Create a filesystem
+fs = fsspec.filesystem("s3", anon=True)
+# Open the file with the filesystem object and configure caching
+backend = fs.open(s3_path, mode="rb", cache_type="mmap", block_size=1024, cache_options={"location": "cache"})
+# Create reader from the fsspec file object using a context manager.
+# This will automatically close the file when the block is exited.
+with OmFilePyReader(backend) as reader:
+    # Read a specific region from the data
+    data = reader[57812:57813, 0:100]
+    print(f"First 10 temperature values: {data[:10]}")
+    # [18.0, 17.7, 17.65, 17.45, 17.15, 17.6, 18.7, 20.75, 21.7, 22.65]
 ```
 
 ### Writing Arrays
