@@ -14,11 +14,11 @@ use omfiles_rs::{
     io::writer::{OmFileWriter, OmFileWriterArrayFinalized, OmOffsetSize},
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
-use std::fs::File;
+use std::{fs::File, sync::Mutex};
 
 #[pyclass]
 pub struct OmFilePyWriter {
-    file_writer: OmFileWriter<File>,
+    file_writer: Mutex<Option<OmFileWriter<File>>>,
 }
 
 #[pymethods]
@@ -28,7 +28,7 @@ impl OmFilePyWriter {
         let file_handle = File::create(file_path)?;
         let writer = OmFileWriter::new(file_handle, 8 * 1024); // initial capacity of 8KB
         Ok(Self {
-            file_writer: writer,
+            file_writer: Mutex::new(Some(writer)),
         })
     }
 
@@ -37,9 +37,32 @@ impl OmFilePyWriter {
             signature = (root_variable)
         )]
     fn close(&mut self, root_variable: OmVariable) -> PyResult<()> {
-        self.file_writer
-            .write_trailer(root_variable.into())
-            .map_err(convert_omfilesrs_error)
+        let mut guard = self.file_writer.lock().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Lock error: {}", e))
+        })?;
+
+        if let Some(writer) = guard.as_mut() {
+            writer
+                .write_trailer(root_variable.into())
+                .map_err(convert_omfilesrs_error)?;
+            // Take ownership and drop to ensure proper file closure
+            guard.take();
+        } else {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "I/O operation on closed writer or file",
+            ));
+        }
+
+        Ok(())
+    }
+
+    #[getter]
+    fn closed(&self) -> PyResult<bool> {
+        let guard = self.file_writer.lock().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Lock error: {}", e))
+        })?;
+
+        Ok(guard.is_none())
     }
 
     #[pyo3(
@@ -105,20 +128,19 @@ impl OmFilePyWriter {
             let array = data.downcast::<PyArrayDyn<u16>>()?.readonly();
             self.write_array_internal(array, chunks, scale_factor, add_offset, compression)
         } else {
-            Err(OmFilesRsError::InvalidDataType)
-        };
+            Err(OmFilesRsError::InvalidDataType).map_err(convert_omfilesrs_error)
+        }?;
 
-        let array_meta = array_meta.map_err(convert_omfilesrs_error)?;
+        self.with_writer(|file_writer| {
+            let offset_size = file_writer
+                .write_array(array_meta, name, &children)
+                .map_err(convert_omfilesrs_error)?;
 
-        let offset_size = self
-            .file_writer
-            .write_array(array_meta, name, &children)
-            .map_err(convert_omfilesrs_error)?;
-
-        Ok(OmVariable {
-            name: name.to_string(),
-            offset: offset_size.offset,
-            size: offset_size.size,
+            Ok(OmVariable {
+                name: name.to_string(),
+                offset: offset_size.offset,
+                size: offset_size.size,
+            })
         })
     }
 
@@ -176,20 +198,38 @@ impl OmFilePyWriter {
     fn write_group(&mut self, name: &str, children: Vec<OmVariable>) -> PyResult<OmVariable> {
         let children: Vec<OmOffsetSize> = children.iter().map(Into::into).collect();
 
-        let offset_size = self
-            .file_writer
-            .write_none(name, &children)
-            .map_err(convert_omfilesrs_error)?;
+        self.with_writer(|file_writer| {
+            let offset_size = file_writer
+                .write_none(name, &children)
+                .map_err(convert_omfilesrs_error)?;
 
-        Ok(OmVariable {
-            name: name.to_string(),
-            offset: offset_size.offset,
-            size: offset_size.size,
+            Ok(OmVariable {
+                name: name.to_string(),
+                offset: offset_size.offset,
+                size: offset_size.size,
+            })
         })
     }
 }
 
 impl OmFilePyWriter {
+    // Helper method for safe writer access
+    fn with_writer<F, R>(&self, f: F) -> PyResult<R>
+    where
+        F: FnOnce(&mut OmFileWriter<File>) -> PyResult<R>,
+    {
+        let mut guard = self.file_writer.lock().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Lock error: {}", e))
+        })?;
+
+        match guard.as_mut() {
+            Some(writer) => f(writer),
+            None => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "I/O operation on closed writer or file",
+            )),
+        }
+    }
+
     fn write_array_internal<'py, T>(
         &mut self,
         data: PyReadonlyArrayDyn<'py, T>,
@@ -197,7 +237,7 @@ impl OmFilePyWriter {
         scale_factor: f32,
         add_offset: f32,
         compression: CompressionType,
-    ) -> Result<OmFileWriterArrayFinalized, OmFilesRsError>
+    ) -> PyResult<OmFileWriterArrayFinalized>
     where
         T: Element + OmFileArrayDataType,
     {
@@ -207,18 +247,18 @@ impl OmFilePyWriter {
             .map(|x| *x as u64)
             .collect::<Vec<u64>>();
 
-        let mut writer = self.file_writer.prepare_array::<T>(
-            dimensions,
-            chunks,
-            compression,
-            scale_factor,
-            add_offset,
-        )?;
+        self.with_writer(|file_writer| {
+            let mut writer = file_writer
+                .prepare_array::<T>(dimensions, chunks, compression, scale_factor, add_offset)
+                .map_err(convert_omfilesrs_error)?;
 
-        writer.write_data(data.as_array(), None, None)?;
+            writer
+                .write_data(data.as_array(), None, None)
+                .map_err(convert_omfilesrs_error)?;
 
-        let variable_meta = writer.finalize();
-        Ok(variable_meta)
+            let variable_meta = writer.finalize();
+            Ok(variable_meta)
+        })
     }
 
     fn store_scalar<T: OmFileScalarDataType + 'static>(
@@ -227,15 +267,16 @@ impl OmFilePyWriter {
         name: &str,
         children: &[OmOffsetSize],
     ) -> PyResult<OmVariable> {
-        let offset_size = self
-            .file_writer
-            .write_scalar(value, name, children)
-            .map_err(convert_omfilesrs_error)?;
+        self.with_writer(|file_writer| {
+            let offset_size = file_writer
+                .write_scalar(value, name, children)
+                .map_err(convert_omfilesrs_error)?;
 
-        Ok(OmVariable {
-            name: name.to_string(),
-            offset: offset_size.offset,
-            size: offset_size.size,
+            Ok(OmVariable {
+                name: name.to_string(),
+                offset: offset_size.offset,
+                size: offset_size.size,
+            })
         })
     }
 }

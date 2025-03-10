@@ -14,7 +14,7 @@ def test_write_om_roundtrip():
 
         reader = omfiles.OmFilePyReader(temp_file)
         data = reader[0:5, 0:5]
-        del reader
+        reader.close()
 
         assert data.shape == (5, 5)
         assert data.dtype == np.float32
@@ -58,12 +58,10 @@ def test_round_trip_array_datatypes():
             variable = writer.write_array(test_data, chunks=chunks, scale_factor=10000.0, add_offset=0.0)
             writer.close(variable)
 
-            del writer
-
             # Read data back
             reader = omfiles.OmFilePyReader(temp_file)
             read_data = reader[:]
-            del reader
+            reader.close()
 
             # Verify data
             assert read_data.dtype == test_data.dtype
@@ -120,7 +118,6 @@ def test_write_hierarchical_file():
 
         # Finalize the file
         writer.close(root_var)
-        del writer
 
         # Read and verify the data using OmFilePyReader
         reader = omfiles.OmFilePyReader(temp_file)
@@ -155,10 +152,73 @@ def test_write_hierarchical_file():
         assert metadata == 42.0
         assert metadata_reader.dtype == np.float64
 
-        del reader
-        del child1_reader
-        del child2_reader
-        del metadata_reader
+        reader.close()
+        child1_reader.close()
+        child2_reader.close()
+        metadata_reader.close()
+
+    finally:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+
+def test_reader_close():
+    temp_file = "test_close.om"
+
+    try:
+        # Create test file
+        create_test_om_file(temp_file)
+
+        # Open reader
+        reader = omfiles.OmFilePyReader(temp_file)
+
+        # Verify we can read data
+        data = reader[0:5, 0:5]
+        assert data.shape == (5, 5)
+        assert data.dtype == np.float32
+
+        # Test context manager
+        with omfiles.OmFilePyReader(temp_file) as ctx_reader:
+            ctx_data = ctx_reader[0:5, 0:5]
+            assert ctx_data.shape == (5, 5)
+            # Reader should be valid inside context
+            assert not ctx_reader.closed
+        # Reader should be closed after context
+        assert ctx_reader.closed
+
+        # Explicitly close the reader
+        reader.close()
+
+        # Verify that the reader reports as closed
+        assert reader.closed
+
+        # Verify that operations on a closed reader fail
+        try:
+            _ = reader[0:5, 0:5]
+            assert False, "Expecting an error when accessing a closed reader"
+        except ValueError as e:
+            assert "closed" in str(e).lower()
+
+        try:
+            _ = reader.get_flat_variable_metadata()
+            assert False, "Expecting an error when calling methods on a closed reader"
+        except ValueError as e:
+            assert "closed" in str(e).lower()
+
+        # Test double-close is safe
+        reader.close()  # This should not raise an exception
+        assert reader.closed
+
+        # Test we can still use the data after closing the reader
+        np.testing.assert_array_equal(
+            data,
+            [
+                [0.0, 1.0, 2.0, 3.0, 4.0],
+                [5.0, 6.0, 7.0, 8.0, 9.0],
+                [10.0, 11.0, 12.0, 13.0, 14.0],
+                [15.0, 16.0, 17.0, 18.0, 19.0],
+                [20.0, 21.0, 22.0, 23.0, 24.0],
+            ],
+        )
 
     finally:
         if os.path.exists(temp_file):

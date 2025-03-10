@@ -42,9 +42,10 @@ def test_om_backend_xarray_dtype():
             data = xr.Variable(dims=["x", "y"], data=indexing.LazilyIndexedArray(backend_array))
             assert data.dtype == dtype
 
-            del data, backend_array, reader
+            reader.close()
         finally:
-            os.remove(temp_file)
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
 
 def test_xarray_backend():
@@ -55,9 +56,9 @@ def test_xarray_backend():
 
         warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
         ds = xr.open_dataset(temp_file, engine="om")
-        data = ds["data"][:].values
-        del ds
+        variable = ds["data"]
 
+        data = variable.values
         assert data.shape == (5, 5)
         assert data.dtype == np.float32
         np.testing.assert_array_equal(
@@ -72,7 +73,8 @@ def test_xarray_backend():
         )
 
     finally:
-        os.remove(temp_file)
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
 
 def test_xarray_hierarchical_file():
     temp_file = "test_hierarchical_xarray.om"
@@ -100,7 +102,6 @@ def test_xarray_hierarchical_file():
             scale_factor=100000.0,
             children=[temperature_dimension_var, temp_units, temp_metadata]
         )
-
 
         # dimensionality metadata
         precipitation_dimension_var = writer.write_scalar("LATITUDE,LONGITUDE,TIME", name="_ARRAY_DIMENSIONS")
@@ -130,7 +131,6 @@ def test_xarray_hierarchical_file():
 
         # Finalize the file
         writer.close(root_var)
-        del writer
 
         warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
         ds = xr.open_dataset(temp_file, engine="om")
@@ -171,8 +171,6 @@ def test_xarray_hierarchical_file():
         mean_temp = ds["temperature"].mean(dim="TIME")
         assert mean_temp.shape == (5, 5, 5)
         assert mean_temp.dims == ("LATITUDE", "LONGITUDE", "ALTITUDE")
-
-        del ds, subset
 
     finally:
         if os.path.exists(temp_file):

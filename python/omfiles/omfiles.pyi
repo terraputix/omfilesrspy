@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -28,6 +28,17 @@ class OmFilePyWriter:
         """
         ...
 
+    @property
+    def closed(self) -> bool:
+        """
+        Check if the writer is closed.
+
+        Returns:
+            True if the writer is closed, False otherwise
+        """
+        ...
+
+
     def close(self, root_variable: OmVariable) -> None:
             """
             Finalize and close the .om file by writing the trailer with the root variable.
@@ -37,7 +48,7 @@ class OmFilePyWriter:
                                 This variable's offset and size will be used to write the trailer.
 
             Raises:
-                PyValueError: If there's an error writing the trailer
+                ValueError: If there's an error writing the trailer
                 OSError: If there's an error writing to the file
             """
             ...
@@ -71,7 +82,7 @@ class OmFilePyWriter:
             children: List of child variables (default: [])
 
         Raises:
-            PyValueError: If the data type is unsupported or if parameters are invalid
+            ValueError: If the data type is unsupported or if parameters are invalid
             OSError: If there's an error writing to the file
         """
         ...
@@ -95,7 +106,7 @@ class OmFilePyWriter:
             OmVariable representing the written scalar in the file structure
 
         Raises:
-            PyValueError: If the value type is unsupported (e.g., booleans)
+            ValueError: If the value type is unsupported (e.g., booleans)
             OSError: If there's an error writing to the file
         """
         ...
@@ -159,7 +170,7 @@ class OmFilePyReader:
             file: Path to the .om file to read or a fsspec file object
 
         Raises:
-            PyValueError: If the file cannot be opened or is invalid
+            ValueError: If the file cannot be opened or is invalid
         """
         ...
 
@@ -207,6 +218,58 @@ class OmFilePyReader:
         Returns:
             True if the variable is a group, False otherwise
         """
+
+    @property
+    def closed(self) -> bool:
+        """
+        Check if the reader is closed.
+
+        Returns:
+            True if the reader is closed, False otherwise
+        """
+        ...
+
+    def close(self) -> None:
+        """
+        Close the reader and release resources.
+
+        This method releases all resources associated with the reader.
+        After closing, any operation on the reader will raise a ValueError.
+
+        It is safe to call this method multiple times.
+        """
+        ...
+
+    def __enter__(self) -> "OmFilePyReader":
+        """
+        Enter a context manager block.
+
+        Returns:
+            Self for use in context manager
+
+        Raises:
+            ValueError: If the reader is already closed
+        """
+        ...
+
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[object]
+    ) -> bool:
+        """
+        Exit a context manager block, closing the reader.
+
+        Args:
+            exc_type: The exception type, if an exception was raised
+            exc_val: The exception value, if an exception was raised
+            exc_tb: The traceback, if an exception was raised
+
+        Returns:
+            False (exceptions are not suppressed)
+        """
+        ...
 
     @classmethod
     def from_path(cls, path: str) -> "OmFilePyReader":
@@ -260,7 +323,7 @@ class OmFilePyReader:
             (int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, or float64).
 
         Raises:
-            PyValueError: If the requested ranges are invalid or if there's an error reading the data
+            ValueError: If the requested ranges are invalid or if there's an error reading the data
         """
         ...
 
