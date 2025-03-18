@@ -7,6 +7,7 @@ import numpy as np
 import omfiles as om
 import xarray as xr
 import zarr
+import tensorstore as ts
 from omfiles.types import BasicSelection
 
 
@@ -76,6 +77,29 @@ class ZarrReader(BaseReader):
 
     def close(self) -> None:
         self.zarr_reader.store.close()
+
+
+class TensorStoreZarrReader(BaseReader):
+    ts_reader: ts.TensorStore
+
+    def __init__(self, filename: str):
+        super().__init__(filename)
+        # Open the Zarr file using TensorStore
+        self.ts_reader = ts.open({
+            'driver': 'zarr',
+            'kvstore': {
+                'driver': 'file',
+                'path': str(self.filename),
+            },
+            'path': 'arr_0',
+            'open': True,
+        }).result()
+
+    def read(self, index: BasicSelection) -> np.ndarray:
+        return self.ts_reader[index].read().result()
+
+    def close(self) -> None:
+        pass
 
 
 class NetCDFReader(BaseReader):

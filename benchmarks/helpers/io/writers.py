@@ -27,7 +27,7 @@ class HDF5Writer(BaseWriter):
 
 class ZarrWriter(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
-        zarr.save(str(self.filename), data, chunks=np.array(chunk_size))
+        zarr.save(str(self.filename), data, zarr_format=2, chunks=np.array(chunk_size))
 
 
 class NetCDFWriter(BaseWriter):

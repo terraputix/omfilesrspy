@@ -24,6 +24,7 @@ read_formats_and_filenames = {
     "h5": "benchmark_files/data.h5",
     "h5hidefix": "benchmark_files/data.h5",
     "zarr": "benchmark_files/data.zarr",
+    "zarrTensorStore": "benchmark_files/data.zarr",
     "nc": "benchmark_files/data.nc",
     "om": "benchmark_files/data.om",
 }
