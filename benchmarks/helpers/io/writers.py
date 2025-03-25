@@ -1,10 +1,10 @@
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Tuple
 
 import h5py
 import netCDF4 as nc
-import numpy as np
 import omfiles as om
 import zarr
 from zarr.core.buffer import NDArrayLike
@@ -18,6 +18,25 @@ class BaseWriter(ABC):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
         raise NotImplementedError("The write method must be implemented by subclasses")
 
+    def get_file_size(self) -> int:
+        """Get the size of a file in bytes."""
+        path = Path(self.filename)
+
+        # For directories (like Zarr stores), calculate total size recursively
+        if path.is_dir():
+            total_size = 0
+            for dirpath, _, filenames in os.walk(path):
+                for f in filenames:
+                    fp = Path(dirpath) / f
+                    if fp.is_file():
+                        total_size += fp.stat().st_size
+            return total_size
+        # For regular files
+        elif path.is_file():
+            return path.stat().st_size
+        else:
+            return 0
+
 
 class HDF5Writer(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
@@ -27,7 +46,14 @@ class HDF5Writer(BaseWriter):
 
 class ZarrWriter(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
-        zarr.save(str(self.filename), data, zarr_format=2, chunks=np.array(chunk_size))
+        import numcodecs
+        compressors = numcodecs.Blosc(cname='zstd', clevel=3, shuffle=numcodecs.Blosc.BITSHUFFLE)
+        root = zarr.open(str(self.filename), mode="w", zarr_format=2)
+        # Ensure root is a Group and not an Array (for type checker)
+        if not isinstance(root, zarr.Group):
+            raise TypeError("Expected root to be a zarr.hierarchy.Group")
+        arr_0 = root.create_array("arr_0", shape=data.shape, chunks=chunk_size, dtype="f4", compressors=compressors)
+        arr_0[:] = data
 
 
 class NetCDFWriter(BaseWriter):

@@ -41,6 +41,7 @@ def bm_write_all_formats(args: Namespace, data: NDArrayLike):
 
         try:
             write_stats = run_multiple_benchmarks(write, args.iterations)
+            write_stats.file_size = writer.get_file_size()
             write_results[format_name] = write_stats
         except Exception as e:
             print(f"Error with {format_name}: {e}")

@@ -5,9 +5,9 @@ import h5py
 import netCDF4 as nc
 import numpy as np
 import omfiles as om
+import tensorstore as ts
 import xarray as xr
 import zarr
-import tensorstore as ts
 from omfiles.types import BasicSelection
 
 
@@ -80,12 +80,12 @@ class ZarrReader(BaseReader):
 
 
 class TensorStoreZarrReader(BaseReader):
-    ts_reader: ts.TensorStore
+    ts_reader: ts.TensorStore # type: ignore
 
     def __init__(self, filename: str):
         super().__init__(filename)
         # Open the Zarr file using TensorStore
-        self.ts_reader = ts.open({
+        self.ts_reader = ts.open({ # type: ignore
             'driver': 'zarr',
             'kvstore': {
                 'driver': 'file',

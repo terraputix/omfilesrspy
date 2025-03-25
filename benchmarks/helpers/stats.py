@@ -18,6 +18,7 @@ class BenchmarkStats:
     cpu_mean: float
     cpu_std: float
     memory_usage: float
+    file_size: float = 0
 
 
 class MeasurementResult(NamedTuple):
@@ -84,6 +85,7 @@ def print_write_benchmark_results(results: Dict[str, BenchmarkStats]) -> None:
     for fmt, result in results.items():
         print(f"\n{fmt} Write Results:")
         _print_benchmark_stats(result)
+        print(f"  File Size: {result.file_size} B")
 
 
 def print_read_benchmark_results(results: Dict[str, BenchmarkStats]) -> None:
