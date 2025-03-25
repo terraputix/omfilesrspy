@@ -48,11 +48,12 @@ class ZarrWriter(BaseWriter):
     def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
         import numcodecs
         compressors = numcodecs.Blosc(cname='zstd', clevel=3, shuffle=numcodecs.Blosc.BITSHUFFLE)
+        # zarr.create_array(str(self.filename), name="arr_0", data=data, chunks=chunk_size, compressors=compressors, zarr_format=2, overwrite=True)
         root = zarr.open(str(self.filename), mode="w", zarr_format=2)
         # Ensure root is a Group and not an Array (for type checker)
         if not isinstance(root, zarr.Group):
             raise TypeError("Expected root to be a zarr.hierarchy.Group")
-        arr_0 = root.create_array("arr_0", shape=data.shape, chunks=chunk_size, dtype="f4", compressors=compressors)
+        arr_0 = root.create_array("arr_0", shape=data.shape, chunks=chunk_size, dtype="f4", compressor=compressors)
         arr_0[:] = data
 
 
