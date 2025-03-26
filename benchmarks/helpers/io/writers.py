@@ -39,9 +39,23 @@ class BaseWriter(ABC):
 
 
 class HDF5Writer(BaseWriter):
-    def write(self, data: NDArrayLike, chunk_size: Tuple[int, ...]) -> None:
+    def write(
+        self,
+        data: NDArrayLike,
+        chunk_size: Tuple[int, ...],
+        compression: str = "gzip",
+        compression_opts: int = 4,
+        shuffle: bool = True
+    ) -> None:
         with h5py.File(self.filename, "w") as f:
-            f.create_dataset("dataset", data=data, chunks=chunk_size)
+            f.create_dataset(
+                "dataset",
+                data=data,
+                chunks=chunk_size,
+                compression=compression,
+                compression_opts=compression_opts,
+                shuffle=shuffle
+            )
 
 
 class ZarrWriter(BaseWriter):
