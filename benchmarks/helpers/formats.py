@@ -6,6 +6,7 @@ from .io.readers import (
     OMReader,
     TensorStoreZarrReader,
     ZarrReader,
+    ZarrsCodecsZarrReader,
 )
 from .io.writers import BaseWriter, HDF5Writer, NetCDFWriter, OMWriter, ZarrWriter
 
@@ -24,6 +25,7 @@ class FormatFactory:
         "h5hidefix": HDF5HidefixReader,
         "zarr": ZarrReader,
         "zarrTensorStore": TensorStoreZarrReader,
+        "zarrPythonViaZarrsCodecs": ZarrsCodecsZarrReader,
         "nc": NetCDFReader,
         "om": OMReader
     }

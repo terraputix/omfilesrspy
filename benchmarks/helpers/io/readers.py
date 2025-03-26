@@ -31,7 +31,10 @@ class HDF5Reader(BaseReader):
 
     def __init__(self, filename: str):
         super().__init__(filename)
-        file = h5py.File(self.filename, "r")
+        # Disable chunk caching by setting cache properties
+        # Parameters: (chunk_cache_mem_size, chunk_cache_nslots, chunk_cache_w0)
+        # Setting size to 0 effectively disables the cache
+        file = h5py.File(self.filename, "r", rdcc_nbytes=0, rdcc_nslots=0, rdcc_w0=0)
         dataset = file["dataset"]
         if not isinstance(dataset, h5py.Dataset):
             raise TypeError("Expected a h5py Dataset")
@@ -100,6 +103,39 @@ class TensorStoreZarrReader(BaseReader):
 
     def close(self) -> None:
         pass
+
+class ZarrsCodecsZarrReader(BaseReader):
+    zarr_reader: zarr.Array
+
+    def __init__(self, filename: str):
+        import zarrs  # noqa: F401
+        zarr.config.set({
+            # "threading.num_workers": None,
+            # "array.write_empty_chunks": False,
+            "codec_pipeline": {
+                "path": "zarrs.ZarrsCodecPipeline",
+                # "validate_checksums": True,
+                # "store_empty_chunks": False,
+                # "chunk_concurrent_minimum": 4,
+                # "chunk_concurrent_maximum": None,
+                "batch_size": 1,
+            }
+        })
+        super().__init__(filename)
+        z = zarr.open(str(self.filename), mode="r")
+        if not isinstance(z, zarr.Group):
+            raise TypeError("Expected a zarr Group")
+        array = z["arr_0"]
+        if not isinstance(array, zarr.Array):
+            raise TypeError("Expected a zarr Array")
+
+        self.zarr_reader = array
+
+    def read(self, index: BasicSelection) -> np.ndarray:
+        return self.zarr_reader[index].__array__()
+
+    def close(self) -> None:
+        self.zarr_reader.store.close()
 
 
 class NetCDFReader(BaseReader):
