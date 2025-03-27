@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import numpy as np
@@ -17,6 +18,18 @@ def temp_om_file():
     dtype: npt.DTypeLike = np.float32
     shape: tuple = (5, 5)
 
-    with tempfile.NamedTemporaryFile(suffix=".om") as temp_file:
+    # On Windows a file cannot be opened twice, so we need to close it first
+    # and take care of deleting it ourselves
+    with tempfile.NamedTemporaryFile(suffix=".om", delete=False) as temp_file:
         create_test_om_file(temp_file.name, shape=shape, dtype=dtype)
-        yield temp_file.name
+        temp_file.close()
+        filename = temp_file.name
+
+    yield filename
+
+    if os.path.exists(filename):
+        try:
+            os.remove(filename)
+        except (PermissionError, OSError) as e:
+            import warnings
+            warnings.warn(f"Failed to remove temporary file {filename}: {e}")
