@@ -123,10 +123,12 @@ def test_xarray_hierarchical_file():
         alt = writer.write_array(name="ALTITUDE", data=np.arange(5).astype(np.float32), chunks=[5])
         time = writer.write_array(name="TIME", data=np.arange(10).astype(np.float32), chunks=[10])
 
+        global_attr = writer.write_scalar("This is a hierarchical OM File", name="description")
+
         # Write root array with children
         root_var = writer.write_group(
             name="",
-            children=[temperature_var, precipitation_var, lat, lon, alt, time]
+            children=[temperature_var, precipitation_var, lat, lon, alt, time, global_attr]
         )
 
         # Finalize the file
@@ -134,6 +136,15 @@ def test_xarray_hierarchical_file():
 
         warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
         ds = xr.open_dataset(temp_file, engine="om")
+        # Check coords are correctly set
+        assert ds.coords["LATITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
+        assert ds.coords["LONGITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
+        assert ds.coords["ALTITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
+        assert ds.coords["TIME"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+        # Check the global attribute
+        assert ds.attrs["description"] == "This is a hierarchical OM File"
+        # Check the variables
+        assert set(ds.variables) == {"temperature", "precipitation", "LATITUDE", "LONGITUDE", "ALTITUDE", "TIME"}
 
         # Check temperature data
         temp = ds["temperature"]
@@ -155,11 +166,6 @@ def test_xarray_hierarchical_file():
         assert precip.attrs["description"] == "Precipitation"
         assert precip.attrs["units"] == "mm"
 
-        # Check dimensions
-        assert ds["LATITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
-        assert ds["LONGITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
-        assert ds["ALTITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
-        assert ds["TIME"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
 
         # Test some xarray operations to ensure everything works as expected
         # Try selecting a subset
