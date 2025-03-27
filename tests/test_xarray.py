@@ -166,6 +166,11 @@ def test_xarray_hierarchical_file():
         assert precip.attrs["description"] == "Precipitation"
         assert precip.attrs["units"] == "mm"
 
+        # Check that dimensions are correctly assigned to dimensions variables
+        assert ds["LATITUDE"].dims == ("LATITUDE",)
+        assert ds["LONGITUDE"].dims == ("LONGITUDE",)
+        assert ds["ALTITUDE"].dims == ("ALTITUDE",)
+        assert ds["TIME"].dims == ("TIME",)
 
         # Test some xarray operations to ensure everything works as expected
         # Try selecting a subset
