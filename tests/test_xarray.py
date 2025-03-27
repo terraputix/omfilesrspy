@@ -1,85 +1,65 @@
-import os
 
 # for some reason xr.open_dataset triggers a warning:
 # "RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility. Expected 16 from C header, got 96 from PyObject"
 # We will just filter it out for now...
 # https://github.com/pydata/xarray/issues/7259
+import tempfile
 import warnings
 
 import numpy as np
 import omfiles.omfiles as om
 import omfiles.xarray_backend as om_xarray
+import pytest
 import xarray as xr
 from xarray.core import indexing
 
 from .test_utils import create_test_om_file
 
+test_dtypes = [
+    np.int8, np.uint8, np.int16, np.uint16, np.int32,
+    np.uint32, np.int64, np.uint64, np.float32, np.float64
+]
 
-def test_om_backend_xarray_dtype():
-    temp_file = "test_file.om"
+@pytest.mark.parametrize('dtype', test_dtypes, ids=[f"{dtype.__name__}" for dtype in test_dtypes])
+def test_om_backend_xarray_dtype(dtype):
+    dtype = np.dtype(dtype)
+    with tempfile.NamedTemporaryFile(suffix=".om") as temp_file:
+        create_test_om_file(temp_file.name, shape=(5,5), dtype=dtype)
+        file_path = temp_file.name
 
-    for dtype in [
-        np.int8,
-        np.uint8,
-        np.int16,
-        np.uint16,
-        np.int32,
-        np.uint32,
-        np.int64,
-        np.uint64,
-        np.float32,
-        np.float64,
-    ]:
-        try:
-            create_test_om_file(temp_file, dtype=dtype)
+        reader = om.OmFilePyReader(file_path)
+        backend_array = om_xarray.OmBackendArray(reader=reader)
 
-            reader = om.OmFilePyReader(temp_file)
-            backend_array = om_xarray.OmBackendArray(reader=reader)
+        assert isinstance(backend_array.dtype, np.dtype)
+        assert backend_array.dtype == dtype
 
-            assert isinstance(backend_array.dtype, np.dtype)
-            assert backend_array.dtype == dtype
+        data = xr.Variable(dims=["x", "y"], data=indexing.LazilyIndexedArray(backend_array))
+        assert data.dtype == dtype
 
-            data = xr.Variable(dims=["x", "y"], data=indexing.LazilyIndexedArray(backend_array))
-            assert data.dtype == dtype
-
-            reader.close()
-        finally:
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+        reader.close()
 
 
-def test_xarray_backend():
-    temp_file = "test_file.om"
+def test_xarray_backend(temp_om_file):
+    warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
+    ds = xr.open_dataset(temp_om_file, engine="om")
+    variable = ds["data"]
 
-    try:
-        create_test_om_file(temp_file)
-
-        warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
-        ds = xr.open_dataset(temp_file, engine="om")
-        variable = ds["data"]
-
-        data = variable.values
-        assert data.shape == (5, 5)
-        assert data.dtype == np.float32
-        np.testing.assert_array_equal(
-            data,
-            [
-                [0.0, 1.0, 2.0, 3.0, 4.0],
-                [5.0, 6.0, 7.0, 8.0, 9.0],
-                [10.0, 11.0, 12.0, 13.0, 14.0],
-                [15.0, 16.0, 17.0, 18.0, 19.0],
-                [20.0, 21.0, 22.0, 23.0, 24.0],
-            ],
-        )
-
-    finally:
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+    data = variable.values
+    assert data.shape == (5, 5)
+    assert data.dtype == np.float32
+    np.testing.assert_array_equal(
+        data,
+        [
+            [0.0, 1.0, 2.0, 3.0, 4.0],
+            [5.0, 6.0, 7.0, 8.0, 9.0],
+            [10.0, 11.0, 12.0, 13.0, 14.0],
+            [15.0, 16.0, 17.0, 18.0, 19.0],
+            [20.0, 21.0, 22.0, 23.0, 24.0],
+        ],
+    )
 
 def test_xarray_hierarchical_file():
-    temp_file = "test_hierarchical_xarray.om"
-
-    try:
+    with tempfile.NamedTemporaryFile(suffix=".om") as temp_file:
         # Create test data
         # temperature: lat, lon, alt, time
         temperature_data = np.random.rand(5, 5, 5, 10).astype(np.float32)
@@ -87,7 +67,7 @@ def test_xarray_hierarchical_file():
         precipitation_data = np.random.rand(5, 5, 10).astype(np.float32)
 
         # Write hierarchical structure
-        writer = om.OmFilePyWriter(temp_file)
+        writer = om.OmFilePyWriter(temp_file.name)
 
         # dimensionality metadata
         temperature_dimension_var = writer.write_scalar("LATITUDE,LONGITUDE,ALTITUDE,TIME", name="_ARRAY_DIMENSIONS")
@@ -135,7 +115,7 @@ def test_xarray_hierarchical_file():
         writer.close(root_var)
 
         warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
-        ds = xr.open_dataset(temp_file, engine="om")
+        ds = xr.open_dataset(temp_file.name, engine="om")
         # Check coords are correctly set
         assert ds.coords["LATITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
         assert ds.coords["LONGITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
@@ -182,7 +162,3 @@ def test_xarray_hierarchical_file():
         mean_temp = ds["temperature"].mean(dim="TIME")
         assert mean_temp.shape == (5, 5, 5)
         assert mean_temp.dims == ("LATITUDE", "LONGITUDE", "ALTITUDE")
-
-    finally:
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
