@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added Changelog
+
+### Fixed
+
+- Fix xarray contained attributes as variables
 - Improve benchmarks slightly
 
 ## [0.0.2] - 2025-03-10
