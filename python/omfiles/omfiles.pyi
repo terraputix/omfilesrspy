@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -175,12 +175,12 @@ class OmFilePyReader:
         ...
 
     @property
-    def shape(self) -> Tuple[int, ...]:
+    def shape(self) -> List[int]:
         """
         Get the shape of the data stored in the .om file.
 
         Returns:
-            Tuple containing the dimensions of the data
+            List containing the dimensions of the data
         """
         ...
 

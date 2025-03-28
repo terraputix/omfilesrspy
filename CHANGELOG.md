@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix type hint for shape property of OmFilePyReader
 - Improved tests to use `pytest` fixtures
 - Fix xarray contained attributes as variables
 - Improve benchmarks slightly
