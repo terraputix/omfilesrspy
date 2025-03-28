@@ -5,6 +5,8 @@ import omfiles
 import pytest
 import xarray as xr
 
+from .test_utils import filter_numpy_size_warning
+
 
 @pytest.fixture
 def s3_backend():
@@ -35,6 +37,7 @@ def test_s3_reader_with_cache(s3_backend_with_cache):
     np.testing.assert_array_almost_equal(data[:10], expected)
 
 
+@filter_numpy_size_warning
 @pytest.mark.xfail(reason="Om Files on S3 currently have no names assigned for the variables")
 def test_s3_xarray(s3_backend_with_cache):
     ds = xr.open_dataset(s3_backend_with_cache, engine="om")

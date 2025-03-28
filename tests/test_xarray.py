@@ -1,10 +1,6 @@
 
-# for some reason xr.open_dataset triggers a warning:
-# "RuntimeWarning: numpy.ndarray size changed, may indicate binary incompatibility. Expected 16 from C header, got 96 from PyObject"
-# We will just filter it out for now...
-# https://github.com/pydata/xarray/issues/7259
+
 import tempfile
-import warnings
 
 import numpy as np
 import omfiles.omfiles as om
@@ -13,7 +9,7 @@ import pytest
 import xarray as xr
 from xarray.core import indexing
 
-from .test_utils import create_test_om_file
+from .test_utils import create_test_om_file, filter_numpy_size_warning
 
 test_dtypes = [
     np.int8, np.uint8, np.int16, np.uint16, np.int32,
@@ -39,8 +35,8 @@ def test_om_backend_xarray_dtype(dtype):
         reader.close()
 
 
+@filter_numpy_size_warning
 def test_xarray_backend(temp_om_file):
-    warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
     ds = xr.open_dataset(temp_om_file, engine="om")
     variable = ds["data"]
 
@@ -58,6 +54,7 @@ def test_xarray_backend(temp_om_file):
         ],
     )
 
+@filter_numpy_size_warning
 def test_xarray_hierarchical_file():
     with tempfile.NamedTemporaryFile(suffix=".om") as temp_file:
         # Create test data
@@ -114,7 +111,6 @@ def test_xarray_hierarchical_file():
         # Finalize the file
         writer.close(root_var)
 
-        warnings.filterwarnings("ignore", message="numpy.ndarray size changed", category=RuntimeWarning)
         ds = xr.open_dataset(temp_file.name, engine="om")
         # Check coords are correctly set
         assert ds.coords["LATITUDE"].values.tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
