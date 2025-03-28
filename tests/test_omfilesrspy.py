@@ -56,87 +56,87 @@ def test_round_trip_array_datatypes():
             # use assert_array_almost_equal since our floating point values are compressed lossy
             np.testing.assert_array_almost_equal(read_data, test_data, decimal=4)
 
-def test_write_hierarchical_file():
-    with tempfile.NamedTemporaryFile(suffix=".om") as temp_file:
-        # Create test data
-        root_data = np.random.rand(10, 10).astype(np.float32)
-        child1_data = np.random.rand(5, 5).astype(np.float32)
-        child2_data = np.random.rand(3, 3).astype(np.float32)
 
-        # Write hierarchical structure
-        writer = omfiles.OmFilePyWriter(temp_file.name)
+def test_write_hierarchical_file(empty_temp_om_file):
+    # Create test data
+    root_data = np.random.rand(10, 10).astype(np.float32)
+    child1_data = np.random.rand(5, 5).astype(np.float32)
+    child2_data = np.random.rand(3, 3).astype(np.float32)
 
-        # Write child2 array
-        child2_var = writer.write_array(
-            child2_data,
-            chunks=[1, 1],
-            name="child2",
-            scale_factor=100000.0
-        )
+    # Write hierarchical structure
+    writer = omfiles.OmFilePyWriter(empty_temp_om_file)
 
-        # Write attributes and get their variables
-        meta1_var = writer.write_scalar(42.0, name="metadata1")
-        meta2_var = writer.write_scalar(123, name="metadata2")
-        meta3_var = writer.write_scalar(3.14, name="metadata3")
+    # Write child2 array
+    child2_var = writer.write_array(
+        child2_data,
+        chunks=[1, 1],
+        name="child2",
+        scale_factor=100000.0
+    )
 
-        # Write child1 array with attribute children
-        child1_var = writer.write_array(
-            child1_data,
-            chunks=[2, 2],
-            name="child1",
-            scale_factor=100000.0,
-            children=[meta1_var, meta2_var, meta3_var]
-        )
+    # Write attributes and get their variables
+    meta1_var = writer.write_scalar(42.0, name="metadata1")
+    meta2_var = writer.write_scalar(123, name="metadata2")
+    meta3_var = writer.write_scalar(3.14, name="metadata3")
 
-        # Write root array with children
-        root_var = writer.write_array(
-            root_data,
-            chunks=[5, 5],
-            name="root",
-            scale_factor=100000.0,
-            children=[child1_var, child2_var]
-        )
+    # Write child1 array with attribute children
+    child1_var = writer.write_array(
+        child1_data,
+        chunks=[2, 2],
+        name="child1",
+        scale_factor=100000.0,
+        children=[meta1_var, meta2_var, meta3_var]
+    )
 
-        # Finalize the file
-        writer.close(root_var)
+    # Write root array with children
+    root_var = writer.write_array(
+        root_data,
+        chunks=[5, 5],
+        name="root",
+        scale_factor=100000.0,
+        children=[child1_var, child2_var]
+    )
 
-        # Read and verify the data using OmFilePyReader
-        reader = omfiles.OmFilePyReader(temp_file.name)
+    # Finalize the file
+    writer.close(root_var)
 
-        # Verify root data
-        read_root = reader[:]
-        np.testing.assert_array_almost_equal(read_root, root_data, decimal=4)
-        assert read_root.shape == (10, 10)
-        assert read_root.dtype == np.float32
+    # Read and verify the data using OmFilePyReader
+    reader = omfiles.OmFilePyReader(empty_temp_om_file)
 
-        # Get child readers
-        child_metadata = reader.get_flat_variable_metadata()
+    # Verify root data
+    read_root = reader[:]
+    np.testing.assert_array_almost_equal(read_root, root_data, decimal=4)
+    assert read_root.shape == (10, 10)
+    assert read_root.dtype == np.float32
 
-        # Verify child1 data
-        child1_reader = reader.init_from_variable(child_metadata["root/child1"])
-        read_child1 = child1_reader[:]
-        np.testing.assert_array_almost_equal(read_child1, child1_data, decimal=4)
-        assert read_child1.shape == (5, 5)
-        assert read_child1.dtype == np.float32
+    # Get child readers
+    child_metadata = reader.get_flat_variable_metadata()
 
-        # Verify child2 data
-        child2_reader = reader.init_from_variable(child_metadata["root/child2"])
-        read_child2 = child2_reader[:]
-        np.testing.assert_array_almost_equal(read_child2, child2_data, decimal=4)
-        assert read_child2.shape == (3, 3)
-        assert read_child2.dtype == np.float32
+    # Verify child1 data
+    child1_reader = reader.init_from_variable(child_metadata["root/child1"])
+    read_child1 = child1_reader[:]
+    np.testing.assert_array_almost_equal(read_child1, child1_data, decimal=4)
+    assert read_child1.shape == (5, 5)
+    assert read_child1.dtype == np.float32
 
-        # Verify metadata attributes
-        metadata_reader = reader.init_from_variable(child_metadata["root/child1/metadata1"])
+    # Verify child2 data
+    child2_reader = reader.init_from_variable(child_metadata["root/child2"])
+    read_child2 = child2_reader[:]
+    np.testing.assert_array_almost_equal(read_child2, child2_data, decimal=4)
+    assert read_child2.shape == (3, 3)
+    assert read_child2.dtype == np.float32
 
-        metadata = metadata_reader.get_scalar()
-        assert metadata == 42.0
-        assert metadata_reader.dtype == np.float64
+    # Verify metadata attributes
+    metadata_reader = reader.init_from_variable(child_metadata["root/child1/metadata1"])
 
-        reader.close()
-        child1_reader.close()
-        child2_reader.close()
-        metadata_reader.close()
+    metadata = metadata_reader.get_scalar()
+    assert metadata == 42.0
+    assert metadata_reader.dtype == np.float64
+
+    reader.close()
+    child1_reader.close()
+    child2_reader.close()
+    metadata_reader.close()
 
 def test_reader_close(temp_om_file):
     reader = omfiles.OmFilePyReader(temp_om_file)
