@@ -42,7 +42,7 @@ from omfiles import OmFileReader
 
 reader = OmFileReader("test_file.om")
 data = reader[0:2, 0:100, ...]
-reader.close() # Close the reader to release resources
+reader.close()  # Close the reader to release resources
 ```
 
 ### Reading Hierarchical Files, e.g. S3 Spatial Files
@@ -124,12 +124,7 @@ writer = OmFileWriter("simple.om")
 
 # Write array with compression
 array_variable = writer.write_array(
-    data,
-    chunks=[50, 50],
-    scale_factor=1.0,
-    add_offset=0.0,
-    compression="pfor_delta_2d",
-    name="data"
+    data, chunks=[50, 50], scale_factor=1.0, add_offset=0.0, compression="pfor_delta_2d", name="data"
 )
 
 # Finalize the file using array_variable as entry-point
